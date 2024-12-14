@@ -38,7 +38,7 @@ public class BookingServiceImpl implements BookingService {
         Optional<Booking> booking = bookingRepository.findById(id);
 
         if (booking.isPresent()) {
-            roomRepository.deleteById(booking.get().getRoom().getId());
+            roomRepository.findById(booking.get().getRoom().getId()).get().setRoomStatus(Status.VERFUGBAR);
             bookingRepository.delete(booking.get());
             return new ResponseEntity<>(HttpStatus.OK);
         }
