@@ -15,6 +15,14 @@ public class Room {
     private String name;
     private int capacity;
     private String location;
+    private Status roomStatus= Status.VERFUGBAR;
+
+    public Status getRoomStatus() {
+        return roomStatus;
+    }
+    public void setRoomStatus(Status roomStatus) {
+        this.roomStatus = roomStatus;
+    }
 
     public Room() {
 
