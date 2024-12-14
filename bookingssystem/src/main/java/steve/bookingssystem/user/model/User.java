@@ -1,5 +1,4 @@
-package steve.bookingssystem.room.model;
-
+package steve.bookingssystem.user.model;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -9,15 +8,15 @@ import lombok.Data;
 
 @Data
 @Entity
-public class Room {
+public class User {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private String name;
-    private int capacity;
-    private String location;
-    private Status roomStatus= Status.VERFUGBAR;
+    private String email;
+    private String password;
+
 
 
 }

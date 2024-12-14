@@ -58,6 +58,7 @@ public class RoomServiceImpl implements RoomService {
             roomExist.setName(roomDetails.getName());
             roomExist.setCapacity(roomDetails.getCapacity());
             roomExist.setLocation(roomDetails.getLocation());
+            roomExist.setRoomStatus(roomDetails.getRoomStatus());
             roomRepository.save(roomExist);
 
             return new ResponseEntity<>(roomExist, HttpStatus.OK);
