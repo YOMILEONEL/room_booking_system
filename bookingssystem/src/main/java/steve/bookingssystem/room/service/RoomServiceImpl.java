@@ -25,7 +25,7 @@ public class RoomServiceImpl implements RoomService {
 
 
     @Override
-    public Room findRoomById(@PathVariable Long id) {
+    public Room findRoomById( Long id) {
         Optional<Room> room = roomRepository.findById(id);
         if (room.isPresent()) {
             return room.get();
@@ -39,7 +39,7 @@ public class RoomServiceImpl implements RoomService {
     }
 
     @Override
-        public ResponseEntity<Void> deleteRoom(@PathVariable Long id) {
+        public ResponseEntity<Void> deleteRoom( Long id) {
         Optional<Room> room = roomRepository.findById(id);
 
         if (room.isPresent()) {
@@ -50,7 +50,7 @@ public class RoomServiceImpl implements RoomService {
     }
 
     @Override
-    public ResponseEntity<Room> updateRoom(@PathVariable Long id, @RequestBody Room roomDetails) {
+    public ResponseEntity<Room> updateRoom( Long id,  Room roomDetails) {
         Optional<Room> room = roomRepository.findById(id);
 
         if (room.isPresent()) {

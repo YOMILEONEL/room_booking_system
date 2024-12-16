@@ -8,6 +8,7 @@ import steve.bookingssystem.room.service.RoomService;
 
 import java.util.List;
 
+
 @RestController
 @RequestMapping("/room")
 public class RoomController {
@@ -22,6 +23,7 @@ public class RoomController {
 
     @PostMapping("/save")
     public Room saveRoom(@RequestBody Room room) {
+        System.out.println(1);
         return roomService.saveRoom(room);
     }
 
