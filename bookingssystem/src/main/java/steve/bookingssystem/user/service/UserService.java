@@ -3,7 +3,6 @@ package steve.bookingssystem.user.service;
 
 import org.springframework.http.ResponseEntity;
 import steve.bookingssystem.user.model.User;
-import steve.bookingssystem.user.repository.UserRepository;
 
 import java.util.List;
 
