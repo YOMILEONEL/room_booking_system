@@ -11,11 +11,7 @@ import TextField from "@mui/material/TextField";
 import { Role } from "./Role";
 import { useRouter } from "next/navigation";
 
-interface User{
-  id: number;
-  username: string;
-  role: Role;
-}
+
 
 export default function Registration() {
   const [username, setUsername] = useState<string>("");

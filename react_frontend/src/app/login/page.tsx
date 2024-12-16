@@ -46,7 +46,9 @@ export default function Registration() {
       console.error("Error:", error);
     }
 
+
     setUsername("");
+
     setPassword("");
   };
 
