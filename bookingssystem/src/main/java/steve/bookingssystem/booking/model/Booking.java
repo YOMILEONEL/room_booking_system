@@ -3,8 +3,10 @@ package steve.bookingssystem.booking.model;
 import jakarta.persistence.*;
 import lombok.Data;
 import steve.bookingssystem.room.model.Room;
+import steve.bookingssystem.user.model.User;
 
 import java.security.Timestamp;
+import java.time.LocalDate;
 
 @Data
 @Entity
@@ -18,8 +20,12 @@ public class Booking {
     @JoinColumn(name = "roomId", nullable = false)
     private Room room;
 
-    private Timestamp startTime;
-    private Timestamp endTime;
+    @OneToOne
+    @JoinColumn(name= "userId", nullable = false)
+    private User user;
+
+    private LocalDate startTime;
+    private LocalDate endTime;
 
 
 

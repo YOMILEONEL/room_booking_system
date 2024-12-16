@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import steve.bookingssystem.booking.model.Booking;
+import steve.bookingssystem.booking.model.BookingDTO;
 import steve.bookingssystem.booking.service.BookingService;
 
 import java.util.List;
@@ -13,32 +14,32 @@ import java.util.List;
 @RequestMapping("/booking")
 public class BookingController {
 
-
+    @Autowired
     private BookingService bookingService;
 
-    @PostMapping("/add/{roomId}")
-    public ResponseEntity<Void> saveBooking(@RequestBody Booking booking, @PathVariable Long roomId) {
-        return bookingService.addBooking(booking, roomId);
+    @PostMapping("/add")
+    public ResponseEntity<?> saveBooking(@RequestBody BookingDTO booking) {
+        return bookingService.addBooking(booking);
     }
 
-    @GetMapping("get")
-    public List<Booking> getBookings() {
-        return bookingService.getBookings();
+    @GetMapping("getAll/{userId}")
+    public List<Booking> getBookings(@PathVariable Long userId) {
+        return bookingService.getBookings(userId);
     }
 
-    @PutMapping
-    public ResponseEntity<Void> updateBooking(Long id, @RequestBody Booking booking) {
-        return bookingService.updateBooking(id, booking);
+    @PutMapping("/update/{id}/{userId}")
+    public ResponseEntity<?> updateBooking(Long id, @RequestBody Booking booking, @PathVariable Long userId) {
+        return bookingService.updateBooking(id, booking, userId);
     }
 
-    @DeleteMapping("/delete/{id}")
-    public ResponseEntity<Void> deleteBooking(@PathVariable Long id) {
-        return bookingService.deleteBooking(id);
+    @DeleteMapping("/delete/{id}/{userId}")
+    public ResponseEntity<?> deleteBooking(@PathVariable Long id,@PathVariable Long userId) {
+        return bookingService.deleteBooking(id, userId);
     }
 
-    @GetMapping("get/{id}")
-    public Booking getBooking(@PathVariable Long id) {
-        return bookingService.getBooking(id);
+    @GetMapping("get/{id}/{userId}")
+    public Booking getBooking(@PathVariable Long id, @PathVariable Long userId) {
+        return bookingService.getBooking(id, userId);
     }
 
 }

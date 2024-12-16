@@ -2,14 +2,15 @@ package steve.bookingssystem.booking.service;
 
 import org.springframework.http.ResponseEntity;
 import steve.bookingssystem.booking.model.Booking;
+import steve.bookingssystem.booking.model.BookingDTO;
 
 import java.util.List;
 import java.util.Optional;
 
 public interface BookingService {
-    public ResponseEntity<Void> updateBooking(Long id, Booking booking);
-    public ResponseEntity<Void> deleteBooking(Long id);
-    public Booking getBooking(Long id);
-    public List<Booking> getBookings();
-    public ResponseEntity<Void> addBooking(Booking booking, Long roomId);
+    public ResponseEntity<?> updateBooking(Long id, Booking booking, Long userId);
+    public ResponseEntity<?> deleteBooking(Long id, Long userId);
+    public Booking getBooking(Long id, Long userId);
+    public List<Booking> getBookings(Long userId);
+    public ResponseEntity<?> addBooking(BookingDTO booking);
 }
