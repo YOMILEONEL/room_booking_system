@@ -13,6 +13,7 @@ import steve.bookingssystem.user.repository.UserRepository;
 
 import java.util.Optional;
 
+@CrossOrigin
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
