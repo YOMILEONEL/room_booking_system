@@ -21,9 +21,7 @@ export default function Registration() {
     }
   }, [loginStatus, router]);
 
-  const navigateToHomePage = () => {
-    router.push("/userpage");
-  }
+  
 
   const HandleAddUser = async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
@@ -40,7 +38,7 @@ export default function Registration() {
         console.log("Login successful");
         setLoginStatus(true);
       } else {
-        console.error("Login Failed");
+        alert("Password or Username false");
       }
     } catch (error) {
       console.error("Error:", error);
@@ -107,7 +105,7 @@ export default function Registration() {
               }}
               onClick={HandleAddUser}
             >
-              Submit
+              Log In
             </Button>
           </form>
         </Paper>

@@ -1,21 +1,61 @@
 "use client";
 import * as React from "react";
-import AppBar from "@mui/material/AppBar";
+import { useEffect, useState } from "react";
 import Box from "@mui/material/Box";
-import Toolbar from "@mui/material/Toolbar";
-import Typography from "@mui/material/Typography";
-import { Button, Paper, MenuItem, Select, FormControl, InputLabel } from "@mui/material";
-import { useState } from "react";
 import NavBar from "../components/NavBar";
-import TextField from "@mui/material/TextField";
+import UserTable from "../components/UserTable";
+import { Role } from "../regist/Role";
+
+interface User {
+  id: number;
+  username: string;
+  role: Role;
+}
 
 
-export default function HomePage(){
-    return (
-        <Box>
-            <NavBar/>
-            <div>Welcome User</div>
-        </Box>
-        
-    )
+
+export default function HomePage() {
+  const [users, setUsers] = useState<User[]>([]);
+
+  const getAll = async () => {
+    try {
+      const response = await fetch("http://localhost:8080/user/get");
+      const data = await response.json();
+      setUsers(data);
+    } catch (error) {
+      console.error("Error by call of Users:", error);
+    }
+  };
+
+  useEffect(() => {
+    getAll();
+  }, []);
+
+
+  const handleDelete = async (id: number) => {
+    try {
+      const response = await fetch(`http://localhost:8080/user/delete/${id}`, {
+        method: "DELETE",
+      });
+
+      if (response.ok) {
+        console.log("User deleted");
+        getAll();
+      } else {
+        console.error("Failed to delete user");
+      }
+    } catch (error) {
+      console.error("Error:", error);
+    }
+  };
+
+  return (
+    <Box>
+      <NavBar />
+      <Box sx={{ margin: 2 }}>
+        <h1>Benutzerverwaltung</h1>
+        <UserTable users={users} onDelete={handleDelete} />
+      </Box>
+    </Box>
+  );
 }

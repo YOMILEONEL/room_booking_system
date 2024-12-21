@@ -120,7 +120,7 @@ export default function Registration() {
               }}
               onClick={HandleAddUser}
             >
-              Submit
+              Add New User
             </Button>
           </form>
         </Paper>
