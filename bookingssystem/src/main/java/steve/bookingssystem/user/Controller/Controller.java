@@ -16,10 +16,6 @@ public class Controller {
     @Autowired
     private UserService userService;
 
-    @PostMapping("/save")
-    public User saveUser(@RequestBody User user) {
-        return userService.addUser(user);
-    }
 
     @DeleteMapping("/delete/{id}")
     public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
@@ -31,7 +27,7 @@ public class Controller {
         return userService.getUserById(id);
     }
 
-    @GetMapping("/get")
+    @GetMapping("/getAll")
     public List<User> getUsers() {
         return userService.getAllUsers();
     }
