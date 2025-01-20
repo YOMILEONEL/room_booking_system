@@ -1,17 +1,21 @@
 package steve.bookingssystem.user.service;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import steve.bookingssystem.user.model.User;
+import steve.bookingssystem.user.model.UserDTO;
 import steve.bookingssystem.user.repository.UserRepository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class UserServiceImpl implements UserService {
 
+    @Autowired
     private UserRepository userRepository;
 
     @Override
@@ -57,7 +61,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public List<User> getAllUsers() {
-        return userRepository.findAll();
+    public List<UserDTO> getAllUsers() {
+        return userRepository.findAll().stream().map(User::getUserDTO).collect(Collectors.toList());
     }
 }
