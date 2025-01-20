@@ -4,11 +4,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import steve.bookingssystem.user.model.User;
+import steve.bookingssystem.user.model.UserDTO;
 import steve.bookingssystem.user.service.UserService;
 
 import java.util.List;
 
 
+@CrossOrigin
 @RestController
 @RequestMapping("/user")
 public class Controller {
@@ -28,7 +30,7 @@ public class Controller {
     }
 
     @GetMapping("/getAll")
-    public List<User> getUsers() {
+    public List<UserDTO> getUsers() {
         return userService.getAllUsers();
     }
 
