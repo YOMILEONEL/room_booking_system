@@ -28,13 +28,11 @@ export default function Registration() {
 
   const HandleAddUser = async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
-    if (username!= null && password!=null){
-      const user = { username, password, role };
+    if (username=== null && password===null){
+      alert("kk");
+      
     }
-    else{
-      alert("Benutzername oder Password wurde nicht eingegeben !")
-    }
-    
+    const user = { username, password, role };
 
     try {
       const response = await fetch("http://localhost:8080/api/register", {

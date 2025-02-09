@@ -12,14 +12,9 @@ import { useRouter } from 'next/navigation';
 export default function Registration() {
   const [username, setUsername] = useState<string>("");
   const [password, setPassword] = useState<string>("");
-  const [loginStatus, setLoginStatus]= useState<Boolean>(false);
   const router = useRouter();
 
-  useEffect(() => {
-    if (loginStatus) {
-      router.push("/homePage");
-    }
-  }, [loginStatus, router]);
+ 
 
   
 
@@ -36,7 +31,7 @@ export default function Registration() {
 
       if (response.ok) {
         console.log("Login successful");
-        setLoginStatus(true);
+        router.push("/homePage");
       } else {
         alert("Password or Username false");
       }

@@ -19,11 +19,12 @@ export default function HomePage() {
 
   const getAll = async () => {
     try {
-      const response = await fetch("http://localhost:8080/user/get");
+      const response = await fetch("http://localhost:8080/user/getAll");
       const data = await response.json();
       setUsers(data);
     } catch (error) {
       console.error("Error by call of Users:", error);
+      
     }
   };
 
