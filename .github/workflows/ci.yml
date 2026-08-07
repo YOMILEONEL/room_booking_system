@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  backend:
+    name: Backend - Build and Test
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: bookingssystem
+
+    env:
+      SPRING_PROFILES_ACTIVE: test
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 23
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 23
+          cache: maven
+
+      - name: Make Maven wrapper executable
+        run: chmod +x mvnw
+
+      - name: Run backend tests
+        run: ./mvnw test -Dspring.profiles.active=test -e
+
+      - name: Build backend
+        run: ./mvnw clean package -DskipTests
+
+  frontend:
+    name: Frontend - Build Next.js
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: react_frontend
+
+    env:
+      NEXTAUTH_SECRET: ci-build-only-secret
+      NEXT_PUBLIC_BACKEND_URL: http://localhost:8080
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: react_frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build Next.js app
+        run: npm run build

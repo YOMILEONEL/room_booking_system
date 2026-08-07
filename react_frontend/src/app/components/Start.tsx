@@ -21,7 +21,7 @@ export default function Start() {
   <Box>
     <div className='startfotos'>
       <div>
-        <img src="https://www.esi-asia.com/wp-content/uploads/2020/03/Room-Boking-System.png" alt="" />
+        <img src="https://thismakesthat.com/wp-content/uploads/2024/04/adopt-a-theme-nautical-bohemian-etc.jpg" alt="" />
       </div>
       <div>
         <img src="https://roommanager.com/wp-content/uploads/2023/03/Room-Booking-System-1024x683.jpg" alt="" />

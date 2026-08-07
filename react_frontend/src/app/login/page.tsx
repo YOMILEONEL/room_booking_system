@@ -1,48 +1,48 @@
 "use client";
+
 import * as React from "react";
 import Box from "@mui/material/Box";
-import { Button, Paper, MenuItem, Select, FormControl, InputLabel } from "@mui/material";
-import { useState, useEffect } from "react";
-import NavBar from "../components/NavBar";
-import TextField from "@mui/material/TextField";
-import { useRouter } from 'next/navigation';
+import { Button, Paper, TextField } from "@mui/material";
+import { useState } from "react";
+import NavBar from "../components/NavBar"; // Pfad ggf. anpassen
+import { signIn } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
-
-
-export default function Registration() {
+export default function Login() {
   const [username, setUsername] = useState<string>("");
   const [password, setPassword] = useState<string>("");
+  const [error, setError] = useState<string>("");
+  const [loading, setLoading] = useState<boolean>(false);
   const router = useRouter();
 
- 
-
-  
-
-  const HandleAddUser = async (e: React.MouseEvent<HTMLButtonElement>) => {
+  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const user = { username, password };
+    setError("");
+    setLoading(true);
 
-    try {
-      const response = await fetch("http://localhost:8080/api/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(user),
-      });
-
-      if (response.ok) {
-        console.log("Login successful");
-        router.push("/homePage");
-      } else {
-        alert("Password or Username false");
-      }
-    } catch (error) {
-      console.error("Error:", error);
+    if (!username || !password) {
+      setError("Bitte Benutzername und Passwort eingeben.");
+      setLoading(false);
+      return;
     }
 
+    const result = await signIn("credentials", {
+      username,
+      password,
+      redirect: false,   // kein Auto-Redirect durch NextAuth
+    });
 
-    setUsername("");
+    setLoading(false);
 
-    setPassword("");
+    // Fehler vom Credentials-Provider (inkl. 401 von deinem Backend)
+    if (result?.error) {
+      console.error("Login-Fehler:", result.error);
+      setError("Benutzername oder Passwort falsch!");
+      return;
+    }
+
+    // Erfolgreich → manuelle Weiterleitung
+    router.push("/homePage");
   };
 
   return (
@@ -61,13 +61,13 @@ export default function Registration() {
           }}
         >
           <h1
-            className="title"
             style={{ fontSize: "24px", marginBottom: "20px", color: "#333" }}
           >
-            Logen Sie sich bitte ein!
+            Loggen Sie sich bitte ein!
           </h1>
+
           <form
-            className="input"
+            onSubmit={handleLogin}
             style={{ display: "flex", flexDirection: "column", gap: "15px" }}
           >
             <TextField
@@ -87,9 +87,15 @@ export default function Registration() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
-            
+
+            {error && (
+              <p style={{ color: "red", margin: 0 }}>{error}</p>
+            )}
+
             <Button
+              type="submit"
               variant="contained"
+              disabled={loading}
               sx={{
                 padding: "10px",
                 fontWeight: "bold",
@@ -98,14 +104,12 @@ export default function Registration() {
                   backgroundColor: "#145a96",
                 },
               }}
-              onClick={HandleAddUser}
             >
-              Log In
+              {loading ? "Wird eingeloggt..." : "Log In"}
             </Button>
           </form>
         </Paper>
       </Box>
-      
     </Box>
   );
 }

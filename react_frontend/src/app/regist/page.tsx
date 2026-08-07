@@ -10,6 +10,8 @@ import NavBar from "../components/NavBar";
 import TextField from "@mui/material/TextField";
 import { Role } from "./Role";
 import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
+import { BACKEND_BASE_URL } from "../api/http";
 
 
 
@@ -28,14 +30,15 @@ export default function Registration() {
 
   const HandleAddUser = async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
-    if (username=== null && password===null){
-      alert("kk");
+    if (!username || !password || !role) {
+      alert("Bitte alle Felder ausfüllen!");
+      return;
       
     }
     const user = { username, password, role };
 
     try {
-      const response = await fetch("http://localhost:8080/api/register", {
+      const response = await fetch(`${BACKEND_BASE_URL}/api/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(user),
@@ -43,7 +46,18 @@ export default function Registration() {
 
       if (response.ok) {
         console.log("New user added");
-        setRegistStatus(true);
+        // direkt einloggen, damit eine Session für /homePage existiert
+        const result = await signIn("credentials", {
+          username,
+          password,
+          redirect: false,
+        });
+        if (!result?.error) {
+          setRegistStatus(true);
+        } else {
+          alert("Registrierung erfolgreich, Login fehlgeschlagen. Bitte manuell einloggen.");
+          router.push("/login");
+        }
       } else {
         console.error("Failed to add user");
       }

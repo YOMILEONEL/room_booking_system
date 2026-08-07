@@ -1,15 +1,13 @@
 package steve.bookingssystem.user.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import steve.bookingssystem.exception.ResourceNotFoundException;
 import steve.bookingssystem.user.model.User;
 import steve.bookingssystem.user.model.UserDTO;
 import steve.bookingssystem.user.repository.UserRepository;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -24,40 +22,25 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public ResponseEntity<Void> updateUser(Long id, User newUser) {
-        Optional<User> user = userRepository.findById(id);
-
-        if (user.isPresent()) {
-            User existingUser = user.get();
-            existingUser.setUsername(newUser.getUsername());
-            existingUser.setPassword(newUser.getPassword());
-            userRepository.save(existingUser);
-
-            return ResponseEntity.status(HttpStatus.OK).build();
-        }
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-
+    public void updateUser(Long id, User newUser) {
+        User existingUser = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + id));
+        existingUser.setUsername(newUser.getUsername());
+        existingUser.setPassword(newUser.getPassword());
+        userRepository.save(existingUser);
     }
 
     @Override
-    public ResponseEntity<Void> deleteUser(Long id) {
-        Optional<User> user = userRepository.findById(id);
-
-        if (user.isPresent()) {
-            userRepository.delete(user.get());
-            return ResponseEntity.status(HttpStatus.OK).build();
-        }
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-
+    public void deleteUser(Long id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + id));
+        userRepository.delete(user);
     }
 
     @Override
     public User getUserById(Long id) {
-        Optional<User> user = userRepository.findById(id);
-        if (user.isPresent()) {
-            return user.get();
-        }
-        return null;
+        return userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + id));
     }
 
     @Override
