@@ -1,4 +1,4 @@
-# Code Review — Raumbuchungssystem
+# Code Review — Spacio
 
 Vollständiger Review von Backend (`bookingssystem/`) und Frontend (`react_frontend/`), Stand 2026-08-08.
 Jede Datei in `src/main` bzw. `src/app` wurde gelesen (nicht nur überflogen). Ziel: Korrektheit,
