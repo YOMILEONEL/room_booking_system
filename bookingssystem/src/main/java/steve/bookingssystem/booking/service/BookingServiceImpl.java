@@ -66,6 +66,16 @@ public class BookingServiceImpl implements BookingService {
         Booking booking = bookingRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Booking not found: " + id));
         authorizationService.requireOwnerOrAdmin(booking.getUser().getId());
+
+        if (booking.getPayment() != null && booking.getPayment().getStatus() == PaymentStatus.PAID) {
+            throw new BookingConflictException("Bezahlte Buchungen können nicht gelöscht werden");
+        }
+
+        LocalDate today = LocalDate.now();
+        if (!today.isBefore(booking.getStartTime()) && !today.isAfter(booking.getEndTime())) {
+            throw new BookingConflictException("Laufende Buchungen können nicht gelöscht werden");
+        }
+
         bookingRepository.delete(booking);
     }
 

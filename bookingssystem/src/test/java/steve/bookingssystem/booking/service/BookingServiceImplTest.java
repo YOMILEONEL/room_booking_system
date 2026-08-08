@@ -7,6 +7,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.access.AccessDeniedException;
+import steve.bookingssystem.booking.model.Booking;
 import steve.bookingssystem.booking.model.BookingDTO;
 import steve.bookingssystem.booking.model.BookingResponseDTO;
 import steve.bookingssystem.booking.repository.BookingRepository;
@@ -152,5 +153,52 @@ class BookingServiceImplTest {
                 .isInstanceOf(AccessDeniedException.class);
 
         verify(roomRepository, never()).findById(any(UUID.class));
+    }
+
+    private Booking booking(LocalDate start, LocalDate end, PaymentStatus paymentStatus) {
+        Booking booking = new Booking();
+        booking.setBookingId(UUID.randomUUID());
+        booking.setUser(user());
+        booking.setStartTime(start);
+        booking.setEndTime(end);
+        if (paymentStatus != null) {
+            Payment payment = new Payment();
+            payment.setStatus(paymentStatus);
+            booking.setPayment(payment);
+        }
+        return booking;
+    }
+
+    @Test
+    void deleteBooking_rejectsWhenPaymentIsPaid() {
+        Booking booking = booking(LocalDate.of(2020, 1, 1), LocalDate.of(2020, 1, 3), PaymentStatus.PAID);
+        when(bookingRepository.findById(booking.getBookingId())).thenReturn(Optional.of(booking));
+
+        assertThatThrownBy(() -> bookingService.deleteBooking(booking.getBookingId(), USER_ID))
+                .isInstanceOf(BookingConflictException.class);
+
+        verify(bookingRepository, never()).delete(any());
+    }
+
+    @Test
+    void deleteBooking_rejectsWhenBookingIsCurrentlyRunning() {
+        LocalDate today = LocalDate.now();
+        Booking booking = booking(today.minusDays(1), today.plusDays(1), PaymentStatus.PENDING);
+        when(bookingRepository.findById(booking.getBookingId())).thenReturn(Optional.of(booking));
+
+        assertThatThrownBy(() -> bookingService.deleteBooking(booking.getBookingId(), USER_ID))
+                .isInstanceOf(BookingConflictException.class);
+
+        verify(bookingRepository, never()).delete(any());
+    }
+
+    @Test
+    void deleteBooking_deletesWhenUnpaidAndNotRunning() {
+        Booking booking = booking(LocalDate.of(2099, 1, 1), LocalDate.of(2099, 1, 3), PaymentStatus.PENDING);
+        when(bookingRepository.findById(booking.getBookingId())).thenReturn(Optional.of(booking));
+
+        bookingService.deleteBooking(booking.getBookingId(), USER_ID);
+
+        verify(bookingRepository).delete(booking);
     }
 }

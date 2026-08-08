@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import steve.bookingssystem.exception.ResourceNotFoundException;
 import steve.bookingssystem.invoice.model.Invoice;
+import steve.bookingssystem.invoice.model.InvoicePdfFile;
 import steve.bookingssystem.invoice.model.InvoiceResponseDTO;
 import steve.bookingssystem.invoice.repository.InvoiceRepository;
 import steve.bookingssystem.payment.model.Payment;
@@ -24,6 +25,8 @@ public class InvoiceServiceImpl implements InvoiceService {
     private PaymentRepository paymentRepository;
     @Autowired
     private AuthorizationService authorizationService;
+    @Autowired
+    private InvoicePdfGenerator invoicePdfGenerator;
 
     @Override
     public Invoice generateForPayment(Payment payment) {
@@ -45,13 +48,22 @@ public class InvoiceServiceImpl implements InvoiceService {
 
     @Override
     public InvoiceResponseDTO getForBooking(UUID bookingId) {
+        return InvoiceResponseDTO.from(findInvoiceForBooking(bookingId));
+    }
+
+    @Override
+    public InvoicePdfFile generatePdfForBooking(UUID bookingId) {
+        Invoice invoice = findInvoiceForBooking(bookingId);
+        byte[] pdf = invoicePdfGenerator.generate(invoice);
+        return new InvoicePdfFile("Rechnung-" + invoice.getInvoiceNumber() + ".pdf", pdf);
+    }
+
+    private Invoice findInvoiceForBooking(UUID bookingId) {
         Payment payment = paymentRepository.findByBooking_BookingId(bookingId)
                 .orElseThrow(() -> new ResourceNotFoundException("Payment not found for booking: " + bookingId));
         authorizationService.requireOwnerOrAdmin(payment.getBooking().getUser().getId());
 
-        Invoice invoice = invoiceRepository.findByPayment_Id(payment.getId())
+        return invoiceRepository.findByPayment_Id(payment.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("No invoice yet for booking: " + bookingId));
-
-        return InvoiceResponseDTO.from(invoice);
     }
 }
