@@ -4,11 +4,12 @@ import lombok.Data;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.UUID;
 
 @Data
 public class DiscountCodeResponseDTO {
 
-    private Long id;
+    private UUID id;
     private String code;
     private DiscountType type;
     private BigDecimal value;
@@ -16,7 +17,7 @@ public class DiscountCodeResponseDTO {
     private LocalDate validUntil;
     private boolean active;
 
-    public DiscountCodeResponseDTO(Long id, String code, DiscountType type, BigDecimal value,
+    public DiscountCodeResponseDTO(UUID id, String code, DiscountType type, BigDecimal value,
                                     LocalDate validFrom, LocalDate validUntil, boolean active) {
         this.id = id;
         this.code = code;

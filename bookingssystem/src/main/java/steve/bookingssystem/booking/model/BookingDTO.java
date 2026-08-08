@@ -4,17 +4,18 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import java.time.LocalDate;
+import java.util.UUID;
 
 @Data
 public class BookingDTO {
 
-    private Long bookingId;
+    private UUID bookingId;
 
     @NotNull
-    private Long roomId;
+    private UUID roomId;
 
     @NotNull
-    private Long userId;
+    private UUID userId;
 
     @NotNull
     private LocalDate startTime;

@@ -6,18 +6,19 @@ import steve.bookingssystem.room.model.Room;
 import steve.bookingssystem.user.model.UserDTO;
 
 import java.time.LocalDate;
+import java.util.UUID;
 
 @Data
 public class BookingResponseDTO {
 
-    private Long bookingId;
+    private UUID bookingId;
     private Room room;
     private UserDTO user;
     private LocalDate startTime;
     private LocalDate endTime;
     private PaymentResponseDTO payment;
 
-    public BookingResponseDTO(Long bookingId, Room room, UserDTO user, LocalDate startTime, LocalDate endTime, PaymentResponseDTO payment) {
+    public BookingResponseDTO(UUID bookingId, Room room, UserDTO user, LocalDate startTime, LocalDate endTime, PaymentResponseDTO payment) {
         this.bookingId = bookingId;
         this.room = room;
         this.user = user;

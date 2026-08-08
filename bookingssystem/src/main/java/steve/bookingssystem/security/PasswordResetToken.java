@@ -5,6 +5,7 @@ import lombok.Data;
 import steve.bookingssystem.user.model.User;
 
 import java.time.Instant;
+import java.util.UUID;
 
 @Data
 @Entity
@@ -12,8 +13,8 @@ import java.time.Instant;
 public class PasswordResetToken {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
 
     @Column(nullable = false, unique = true)
     private String token;

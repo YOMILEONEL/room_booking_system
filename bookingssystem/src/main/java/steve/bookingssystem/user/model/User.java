@@ -7,6 +7,8 @@ import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.UUID;
+
 @Data
 @Entity
 @Setter
@@ -15,8 +17,8 @@ import lombok.Setter;
 public class User {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
 
     @NotBlank
     private String username;
@@ -25,10 +27,19 @@ public class User {
     @Size(min = 6)
     private String password;
 
+    @Enumerated(EnumType.STRING)
     private UserRole role= UserRole.MEMBER;
 
+    @Enumerated(EnumType.STRING)
+    private CustomerType customerType;
+
+    private String organisationName;
+    private String firstName;
+    private String lastName;
+    private String phoneNumber;
+
     public static UserDTO getUserDTO(User u){
-        return new UserDTO(u.id, u.username, u.role);
+        return new UserDTO(u.id, u.username, u.role, u.customerType, u.organisationName, u.firstName, u.lastName, u.phoneNumber);
     }
 
 

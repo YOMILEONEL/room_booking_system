@@ -9,8 +9,8 @@ import steve.bookingssystem.discount.model.DiscountCodeResponseDTO;
 import steve.bookingssystem.discount.service.DiscountCodeService;
 
 import java.util.List;
+import java.util.UUID;
 
-@CrossOrigin(origins = "http://localhost:3000")
 @RestController
 @RequestMapping("/discount-code")
 public class DiscountCodeController {
@@ -30,7 +30,7 @@ public class DiscountCodeController {
     }
 
     @DeleteMapping("/{id}")
-    public void delete(@PathVariable Long id) {
+    public void delete(@PathVariable UUID id) {
         discountCodeService.delete(id);
     }
 

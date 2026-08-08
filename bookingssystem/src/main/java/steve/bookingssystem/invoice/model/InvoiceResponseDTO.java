@@ -5,20 +5,21 @@ import lombok.Data;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.UUID;
 
 @Data
 public class InvoiceResponseDTO {
 
-    private Long id;
+    private UUID id;
     private String invoiceNumber;
-    private Long bookingId;
+    private UUID bookingId;
     private BigDecimal amount;
     private String customerUsernameSnapshot;
     private String roomNameSnapshot;
     private LocalDate invoiceDate;
     private Instant createdAt;
 
-    public InvoiceResponseDTO(Long id, String invoiceNumber, Long bookingId, BigDecimal amount,
+    public InvoiceResponseDTO(UUID id, String invoiceNumber, UUID bookingId, BigDecimal amount,
                                String customerUsernameSnapshot, String roomNameSnapshot,
                                LocalDate invoiceDate, Instant createdAt) {
         this.id = id;

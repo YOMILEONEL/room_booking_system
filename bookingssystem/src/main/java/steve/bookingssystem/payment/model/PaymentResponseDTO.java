@@ -4,19 +4,20 @@ import lombok.Data;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.UUID;
 
 @Data
 public class PaymentResponseDTO {
 
-    private Long id;
-    private Long bookingId;
+    private UUID id;
+    private UUID bookingId;
     private BigDecimal amount;
     private PaymentStatus status;
     private String appliedDiscountCode;
     private Instant createdAt;
     private Instant paidAt;
 
-    public PaymentResponseDTO(Long id, Long bookingId, BigDecimal amount, PaymentStatus status,
+    public PaymentResponseDTO(UUID id, UUID bookingId, BigDecimal amount, PaymentStatus status,
                                String appliedDiscountCode, Instant createdAt, Instant paidAt) {
         this.id = id;
         this.bookingId = bookingId;

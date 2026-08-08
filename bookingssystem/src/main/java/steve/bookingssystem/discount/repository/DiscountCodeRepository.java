@@ -5,8 +5,9 @@ import org.springframework.stereotype.Repository;
 import steve.bookingssystem.discount.model.DiscountCode;
 
 import java.util.Optional;
+import java.util.UUID;
 
 @Repository
-public interface DiscountCodeRepository extends JpaRepository<DiscountCode, Long> {
+public interface DiscountCodeRepository extends JpaRepository<DiscountCode, UUID> {
     Optional<DiscountCode> findByCode(String code);
 }

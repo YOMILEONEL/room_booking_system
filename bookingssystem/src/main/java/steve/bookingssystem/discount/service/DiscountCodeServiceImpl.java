@@ -11,6 +11,7 @@ import steve.bookingssystem.security.AuthorizationService;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 public class DiscountCodeServiceImpl implements DiscountCodeService {
@@ -39,7 +40,7 @@ public class DiscountCodeServiceImpl implements DiscountCodeService {
     }
 
     @Override
-    public void delete(Long id) {
+    public void delete(UUID id) {
         authorizationService.requireAdmin();
         DiscountCode discountCode = discountCodeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Discount code not found: " + id));

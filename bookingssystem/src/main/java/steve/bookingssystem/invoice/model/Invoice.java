@@ -7,6 +7,7 @@ import steve.bookingssystem.payment.model.Payment;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.UUID;
 
 @Data
 @Entity
@@ -14,8 +15,8 @@ import java.time.LocalDate;
 public class Invoice {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
 
     @Column(nullable = false, unique = true, length = 40)
     private String invoiceNumber;

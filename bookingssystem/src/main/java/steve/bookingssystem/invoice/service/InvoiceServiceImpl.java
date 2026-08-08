@@ -13,6 +13,7 @@ import steve.bookingssystem.security.AuthorizationService;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.Year;
+import java.util.UUID;
 
 @Service
 public class InvoiceServiceImpl implements InvoiceService {
@@ -43,7 +44,7 @@ public class InvoiceServiceImpl implements InvoiceService {
     }
 
     @Override
-    public InvoiceResponseDTO getForBooking(Long bookingId) {
+    public InvoiceResponseDTO getForBooking(UUID bookingId) {
         Payment payment = paymentRepository.findByBooking_BookingId(bookingId)
                 .orElseThrow(() -> new ResourceNotFoundException("Payment not found for booking: " + bookingId));
         authorizationService.requireOwnerOrAdmin(payment.getBooking().getUser().getId());

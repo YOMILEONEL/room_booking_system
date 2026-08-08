@@ -5,7 +5,8 @@ import org.springframework.web.bind.annotation.*;
 import steve.bookingssystem.payment.model.PaymentResponseDTO;
 import steve.bookingssystem.payment.service.PaymentService;
 
-@CrossOrigin(origins = "http://localhost:3000")
+import java.util.UUID;
+
 @RestController
 @RequestMapping("/payment")
 public class PaymentController {
@@ -14,12 +15,12 @@ public class PaymentController {
     private PaymentService paymentService;
 
     @GetMapping("/booking/{bookingId}")
-    public PaymentResponseDTO getForBooking(@PathVariable Long bookingId) {
+    public PaymentResponseDTO getForBooking(@PathVariable UUID bookingId) {
         return paymentService.getForBooking(bookingId);
     }
 
     @PutMapping("/{id}/confirm")
-    public PaymentResponseDTO confirmPayment(@PathVariable Long id) {
+    public PaymentResponseDTO confirmPayment(@PathVariable UUID id) {
         return paymentService.confirmPayment(id);
     }
 

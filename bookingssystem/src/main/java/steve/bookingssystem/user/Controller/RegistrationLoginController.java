@@ -17,14 +17,16 @@ import steve.bookingssystem.security.RefreshToken;
 import steve.bookingssystem.security.RefreshTokenService;
 import steve.bookingssystem.user.model.AccessTokenResponse;
 import steve.bookingssystem.user.model.AuthResponse;
+import steve.bookingssystem.user.model.CustomerType;
 import steve.bookingssystem.user.model.ForgotPasswordRequest;
 import steve.bookingssystem.user.model.RefreshRequest;
+import steve.bookingssystem.user.model.RegisterRequest;
 import steve.bookingssystem.user.model.ResetPasswordRequest;
 import steve.bookingssystem.user.model.User;
+import steve.bookingssystem.user.model.UserRole;
 import steve.bookingssystem.user.repository.UserRepository;
 import steve.bookingssystem.user.service.CustomUserDetailsService;
 
-@CrossOrigin
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
@@ -43,16 +45,43 @@ public class RegistrationLoginController {
     private final PasswordResetTokenService passwordResetTokenService;
 
     @PostMapping("/register")
-    public ResponseEntity<?> registerUser(@Valid @RequestBody User user) {
-        if (userRepository.findByUsername(user.getUsername()) != null) {
-            return ResponseEntity.badRequest().body("Username already exists");
+    public ResponseEntity<?> registerUser(@Valid @RequestBody RegisterRequest request) {
+        if (userRepository.findByUsername(request.username()) != null) {
+            throw new IllegalArgumentException("Username already exists");
         }
-        user.setPassword(passwordEncoder.encode(user.getPassword()));
+
+        if (request.customerType() == CustomerType.ORGANISATION) {
+            if (request.organisationName() == null || request.organisationName().isBlank()) {
+                throw new IllegalArgumentException("Bitte den Namen der Organisation angeben.");
+            }
+        } else {
+            if (request.firstName() == null || request.firstName().isBlank()
+                    || request.lastName() == null || request.lastName().isBlank()) {
+                throw new IllegalArgumentException("Bitte Vor- und Nachnamen angeben.");
+            }
+        }
+
+        User user = new User();
+        user.setUsername(request.username());
+        user.setPassword(passwordEncoder.encode(request.password()));
+        // Role is never taken from client input - self-registration always creates a MEMBER.
+        // Promoting to ADMIN has to happen out-of-band (direct DB access); there is no
+        // API path for it, so nobody can hand themselves elevated privileges at signup.
+        user.setRole(UserRole.MEMBER);
+        user.setCustomerType(request.customerType());
+        user.setPhoneNumber(request.phoneNumber());
+        if (request.customerType() == CustomerType.ORGANISATION) {
+            user.setOrganisationName(request.organisationName());
+        } else {
+            user.setFirstName(request.firstName());
+            user.setLastName(request.lastName());
+        }
+
         User savedUser = userRepository.save(user);
 
         String accessToken = jwtService.generateAccessToken(userDetailsService.loadUserByUsername(savedUser.getUsername()));
         RefreshToken refreshToken = refreshTokenService.create(savedUser);
-        AuthResponse response = new AuthResponse(savedUser.getId(), savedUser.getUsername(), savedUser.getRole(), accessToken, refreshToken.getToken());
+        AuthResponse response = new AuthResponse(savedUser.getId(), savedUser.getUsername(), savedUser.getRole(), savedUser.getCustomerType(), accessToken, refreshToken.getToken());
         return ResponseEntity.ok(response);
     }
 
@@ -63,7 +92,7 @@ public class RegistrationLoginController {
             User user1 = userRepository.findByUsername(user.getUsername());
             String accessToken = jwtService.generateAccessToken(userDetailsService.loadUserByUsername(user1.getUsername()));
             RefreshToken refreshToken = refreshTokenService.create(user1);
-            AuthResponse response = new AuthResponse(user1.getId(), user1.getUsername(), user1.getRole(), accessToken, refreshToken.getToken());
+            AuthResponse response = new AuthResponse(user1.getId(), user1.getUsername(), user1.getRole(), user1.getCustomerType(), accessToken, refreshToken.getToken());
             return new ResponseEntity<Object>(response, HttpStatus.OK);
         }
         catch(Exception e) {

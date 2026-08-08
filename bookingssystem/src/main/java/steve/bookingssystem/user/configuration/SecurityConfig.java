@@ -13,8 +13,13 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import steve.bookingssystem.security.JwtAuthFilter;
 import steve.bookingssystem.user.service.CustomUserDetailsService;
+
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity // proteger par spring boot
@@ -27,6 +32,7 @@ public class SecurityConfig {
     @Bean // la requete passe ici avant de passer au controleur
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         return http
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth ->
@@ -36,6 +42,24 @@ public class SecurityConfig {
                 )
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
+    }
+
+    // The per-controller @CrossOrigin annotations only affect Spring MVC's dispatch layer -
+    // Spring Security's filter chain runs first and, without this, rejects the browser's CORS
+    // preflight (OPTIONS) request before it ever reaches a controller, since preflight requests
+    // never carry the Authorization header and ".anyRequest().authenticated()" applies to them
+    // too. This is what actually allows cross-origin authenticated requests through.
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOrigins(List.of("http://localhost:3000"));
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(List.of("*"));
+        configuration.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
     }
 
     //algorithmec de criptage

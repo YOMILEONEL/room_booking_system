@@ -5,9 +5,10 @@ import org.springframework.stereotype.Repository;
 import steve.bookingssystem.invoice.model.Invoice;
 
 import java.util.Optional;
+import java.util.UUID;
 
 @Repository
-public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
-    Optional<Invoice> findByPayment_Id(Long paymentId);
+public interface InvoiceRepository extends JpaRepository<Invoice, UUID> {
+    Optional<Invoice> findByPayment_Id(UUID paymentId);
     long countByInvoiceNumberStartingWith(String prefix);
 }

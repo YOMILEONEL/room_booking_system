@@ -6,8 +6,11 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import steve.bookingssystem.user.model.CustomerType;
 import steve.bookingssystem.user.model.User;
 import steve.bookingssystem.user.repository.UserRepository;
+
+import java.util.UUID;
 
 @RequiredArgsConstructor
 @Service
@@ -28,7 +31,7 @@ public class AuthorizationService {
         return user;
     }
 
-    public Long requireAuthenticatedUserId() {
+    public UUID requireAuthenticatedUserId() {
         return requireAuthenticatedUser().getId();
     }
 
@@ -48,7 +51,16 @@ public class AuthorizationService {
         }
     }
 
-    public void requireOwnerOrAdmin(Long userId) {
+    public CustomerType currentCustomerType() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) {
+            return null;
+        }
+        User user = userRepository.findByUsername(auth.getName());
+        return user != null ? user.getCustomerType() : null;
+    }
+
+    public void requireOwnerOrAdmin(UUID userId) {
         if (isAdmin()) {
             return;
         }
