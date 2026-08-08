@@ -1,7 +1,7 @@
 # Projekt-Dokumentation
 
-Technischer Überblick über Architektur, Datenmodell, API und Geschäftsregeln des
-Raumbuchungssystems. Für Setup/Quickstart siehe die [Root-README](../README.md). Für formale
+Technischer Überblick über Architektur, Datenmodell, API und Geschäftsregeln von Spacio.
+Für Setup/Quickstart siehe die [Root-README](../README.md). Für formale
 Anforderungen siehe [`requirements-engineering.md`](requirements-engineering.md), für den
 vollständigen Code-Review siehe [`code-review.md`](code-review.md).
 
@@ -49,7 +49,7 @@ den Kunden-Buchungs-Endpunkt mit einer Kunden-E-Mail.
 | Entität | Wichtigste Felder | Beziehungen |
 |---|---|---|
 | `User` | username, password (BCrypt), role, customerType, organisationName / firstName+lastName, phoneNumber | 1–n Booking, RefreshToken, PasswordResetToken |
-| `Room` | name, capacity, location, pricePerNight, roomStatus, imageUrl, active | 1–n RoomImage, 1–n Booking |
+| `Room` | name, capacity, location, pricePerDay, roomStatus, imageUrl, active | 1–n RoomImage, 1–n Booking |
 | `RoomImage` | imageUrl, position | n–1 Room |
 | `Booking` | startTime, endTime, createdAt | n–1 Room, n–1 User, 1–1 Payment |
 | `Payment` | amount, status (PENDING/PAID), appliedDiscountCode, paidAt | 1–1 Booking, 1–1 Invoice |
@@ -62,8 +62,9 @@ persistiert (`@Enumerated(EnumType.STRING)`).
 
 ## Wichtige Geschäftsregeln
 
-- **Buchungspreis**: `Nächte = Tage(Start, Ende) + 1` (beide Enden eingeschlossen) ×
-  `pricePerNight`, danach ggf. 10 % Organisationsrabatt, danach ggf. Rabattcode. Organisationen
+- **Buchungspreis**: `Tage = Tage(Start, Ende) + 1` (beide Enden eingeschlossen, jeder gehaltene
+  Kalendertag wird berechnet — ein Raum wird tage-, nicht nächteweise reserviert) ×
+  `pricePerDay`, danach ggf. 10 % Organisationsrabatt, danach ggf. Rabattcode. Organisationen
   können nie einen Rabattcode zusätzlich einlösen.
 - **Überlappungsprüfung**: Ein Raum kann nicht doppelt für sich überschneidende Zeiträume gebucht
   werden (Backend lehnt mit HTTP 409 ab).

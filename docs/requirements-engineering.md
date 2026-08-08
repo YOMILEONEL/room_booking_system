@@ -1,10 +1,10 @@
-# Requirements Engineering — Raumbuchungssystem
+# Requirements Engineering — Spacio
 
 ## 1. Einleitung
 
 ### 1.1 Zweck des Dokuments
 
-Dieses Dokument beschreibt die Anforderungen an das Raumbuchungssystem — ein Buchungssystem für
+Dieses Dokument beschreibt die Anforderungen an Spacio — ein Buchungssystem für
 Besprechungs-, Veranstaltungs- und Schulungsräume. Es wurde begleitend zur Implementierung
 erstellt und bildet den tatsächlich umgesetzten Funktionsumfang als formale Anforderungen ab
 (Ist-Zustand), ergänzt um bewusst getroffene Abgrenzungen. Es dient als Referenz für weitere
@@ -28,7 +28,7 @@ bewerten; zukünftige Bearbeiter:innen, die den Kontext einer Entscheidung nachv
 
 ## 2. Produktübersicht
 
-Das Raumbuchungssystem ersetzt eine manuelle/telefonische Raumreservierung durch eine
+Spacio ersetzt eine manuelle/telefonische Raumreservierung durch eine
 Selbstbedienungs-Plattform: Kunden sehen Verfügbarkeit und Preise in Echtzeit und buchen selbst;
 Administratoren behalten die volle Kontrolle über Raumbestand, Preise, Zahlungsstatus und können
 im Namen von Kunden buchen (z. B. bei telefonischer Anfrage). Ein zentrales Geschäftsmerkmal ist
@@ -77,7 +77,7 @@ umgesetzte, verpflichtende Anforderung.
 
 ### 4.2 Raumverwaltung
 
-- **FA-ROOM.1** Administratoren müssen Räume mit Name, Kapazität, Standort, Preis pro Nacht und
+- **FA-ROOM.1** Administratoren müssen Räume mit Name, Kapazität, Standort, Preis pro Tag und
   Status anlegen und bearbeiten können.
 - **FA-ROOM.2** Ein Raum muss mehrere Fotos haben können; eines davon ist das Titelbild.
   Administratoren müssen Fotos hochladen, löschen und die Reihenfolge ändern können.

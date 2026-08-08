@@ -1,4 +1,4 @@
-# Raumbuchungssystem
+# Spacio
 
 Fullstack-Anwendung zur Verwaltung und Buchung von Besprechungs-, Veranstaltungs- und
 Schulungsräumen. Backend (Spring Boot) und Frontend (Next.js) sind getrennte Anwendungen, die über
