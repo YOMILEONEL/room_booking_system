@@ -1,20 +1,8 @@
 services:
-  mysql:
-    image: mysql:8
-    container_name: booking-mysql
-    restart: unless-stopped
-    environment:
-      MYSQL_ROOT_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:?set SPRING_DATASOURCE_PASSWORD in .env}
-      MYSQL_DATABASE: bookingssystem
-    ports:
-      - "3306:3306"
-    volumes:
-      - mysql_data:/var/lib/mysql
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
+  # No mysql/postgres service here on purpose: the backend connects to a remote
+  # Supabase (hosted Postgres) database instead of a local/containerized one -
+  # see backend.environment below. SPRING_DATASOURCE_PASSWORD comes from
+  # bookingssystem/.env (not committed).
 
   backend:
     build: ./bookingssystem
@@ -23,11 +11,27 @@ services:
     env_file:
       - ./bookingssystem/.env
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/bookingssystem
-      SPRING_DATASOURCE_USERNAME: root
-    depends_on:
-      mysql:
-        condition: service_healthy
+      # Use the "Session pooler" connection string from Supabase (Project Settings
+      # -> Database -> Connection string -> JDBC), NOT "Direct connection" (that
+      # one is IPv6-only and usually unreachable from Docker Desktop on Windows)
+      # and NOT "Transaction pooler" (port 6543 - doesn't support the prepared
+      # statements Hibernate relies on). Fill in your project's actual host/user.
+      SPRING_DATASOURCE_URL: jdbc:postgresql://aws-1-eu-west-1.pooler.supabase.com:5432/postgres?sslmode=require
+      SPRING_DATASOURCE_USERNAME: postgres.fvfbnxgkzbynownyywtd
+      # Fresh Supabase database, never baselined for Flyway: let Hibernate
+      # reconcile the schema directly instead, same approach used for the
+      # earlier local-MySQL setup.
+      SPRING_FLYWAY_ENABLED: "false"
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      # Room photo uploads (Supabase Storage, S3-compatible). Optional - the app runs fine
+      # without these, only room image upload needs them. Endpoint/region come from Supabase
+      # dashboard: Project Settings -> Storage -> S3 Connection. Bucket must be created there
+      # first (Storage -> New bucket), marked Public. Access key/secret go in
+      # bookingssystem/.env, not here.
+      SUPABASE_URL: https://fvfbnxgkzbynownyywtd.supabase.co
+      SUPABASE_S3_ENDPOINT: https://fvfbnxgkzbynownyywtd.supabase.co/storage/v1/s3
+      SUPABASE_S3_REGION: eu-west-1
+      SUPABASE_S3_BUCKET: room-images
     ports:
       - "8080:8080"
 
@@ -41,10 +45,10 @@ services:
     environment:
       NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:?set NEXTAUTH_SECRET in .env}
+      # Server-side (NextAuth) calls the backend via the Docker service name, not
+      # "localhost" - "localhost" inside this container means this container.
+      BACKEND_INTERNAL_URL: http://backend:8080
     depends_on:
       - backend
     ports:
       - "3000:3000"
-
-volumes:
-  mysql_data:

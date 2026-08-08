@@ -1,2 +1,5 @@
 # Root-level secrets for docker-compose
 .env
+
+# Docker CLI output redirected to a file during local debugging
+compose-up.log
