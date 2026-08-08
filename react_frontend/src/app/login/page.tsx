@@ -53,9 +53,9 @@ function AuthForm() {
       return;
     }
 
-    // Admins landen im Admin-Dashboard, Kunden bleiben auf der normalen Seite.
+    // Admins landen im Admin-Dashboard, Kunden auf der Startseite.
     const session = await getSession();
-    router.push(session?.user?.role === "ADMIN" ? "/admin" : "/rooms");
+    router.push(session?.user?.role === "ADMIN" ? "/admin" : "/");
   };
 
   const handleRegister = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -94,7 +94,7 @@ function AuthForm() {
         switchMode("login");
         return;
       }
-      router.push("/rooms");
+      router.push("/");
     } catch (err) {
       console.error("Error:", err);
       setError(extractErrorMessage(err, "Registrierung fehlgeschlagen."));
