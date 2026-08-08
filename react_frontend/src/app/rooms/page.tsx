@@ -4,6 +4,7 @@ import * as React from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import NavBar from "../components/NavBar";
+import Footer from "../components/Footer";
 import RoomTable from "../components/RoomTable";
 
 export default function RoomsPage() {
@@ -30,6 +31,8 @@ export default function RoomsPage() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
         <RoomTable />
       </div>
+
+      <Footer />
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import NavBar from "../../components/NavBar";
+import Footer from "../../components/Footer";
 import BookingAdd from "../../components/BookingAdd";
 import RoomGallery from "../../components/RoomGallery";
 import {
@@ -19,7 +20,7 @@ import {
   type RoomStatus,
 } from "../../api/room.api";
 import { roomImages, defaultRoomImage } from "../../lib/roomImages";
-import { Card, Badge, Button, TextInput, Select, Alert } from "../../components/ui";
+import { Card, Badge, Button, TextInput, Textarea, Select, Alert } from "../../components/ui";
 
 const currency = new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" });
 const ROOM_STATUS: RoomStatus[] = ["VERFUGBAR", "GEBUCHT"];
@@ -41,7 +42,10 @@ export default function RoomDetailPage() {
   const [editRoom, setEditRoom] = React.useState(false);
   const [editName, setEditName] = React.useState("");
   const [editLocation, setEditLocation] = React.useState("");
+  const [editCity, setEditCity] = React.useState("");
+  const [editDescription, setEditDescription] = React.useState("");
   const [editCapacity, setEditCapacity] = React.useState<number | "">("");
+  const [editSizeSquareMeters, setEditSizeSquareMeters] = React.useState<number | "">("");
   const [editPrice, setEditPrice] = React.useState<number | "">("");
   const [editStatus, setEditStatus] = React.useState<RoomStatus>("VERFUGBAR");
   const [editError, setEditError] = React.useState<string | null>(null);
@@ -122,8 +126,11 @@ export default function RoomDetailPage() {
     if (!editRoom && room) {
       setEditName(room.name);
       setEditLocation(room.location);
+      setEditCity(room.city);
+      setEditDescription(room.description);
       setEditCapacity(room.capacity);
-      setEditPrice(room.pricePerNight);
+      setEditSizeSquareMeters(room.sizeSquareMeters ?? "");
+      setEditPrice(room.pricePerDay);
       setEditStatus(room.roomStatus);
     }
     setEditError(null);
@@ -139,12 +146,16 @@ export default function RoomDetailPage() {
     if (
       !editName ||
       !editLocation ||
+      !editCity ||
+      !editDescription ||
       editCapacity === "" ||
       editCapacity <= 0 ||
+      editSizeSquareMeters === "" ||
+      editSizeSquareMeters <= 0 ||
       editPrice === "" ||
       editPrice <= 0
     ) {
-      setEditError("Bitte Name, Kapazität (>0), Standort und Preis/Nacht (>0) ausfüllen.");
+      setEditError("Bitte Name, Kapazität (>0), Größe (>0), Standort, Stadt, Beschreibung und Preis/Tag (>0) ausfüllen.");
       return;
     }
 
@@ -153,14 +164,17 @@ export default function RoomDetailPage() {
       const updated = await updateRoom(id, {
         name: editName,
         capacity: editCapacity,
+        sizeSquareMeters: editSizeSquareMeters,
         location: editLocation,
-        pricePerNight: editPrice,
+        city: editCity,
+        description: editDescription,
+        pricePerDay: editPrice,
         roomStatus: editStatus,
       });
-      // updateRoom returns the raw Room entity (no effectivePricePerNight) - this form is
+      // updateRoom returns the raw Room entity (no effectivePricePerDay) - this form is
       // admin-only, and admins never get the organisation discount, so the effective price
       // always equals the raw price here.
-      setRoom((prev) => (prev ? { ...prev, ...updated, effectivePricePerNight: updated.pricePerNight } : prev));
+      setRoom((prev) => (prev ? { ...prev, ...updated, effectivePricePerDay: updated.pricePerDay } : prev));
       setEditSuccess("Raum wurde aktualisiert.");
       setEditRoom(false);
     } catch (err) {
@@ -216,16 +230,25 @@ export default function RoomDetailPage() {
                     </Badge>
                   )}
                 </div>
-                <p className="text-text-secondary">Standort: {room.location}</p>
-                <p className="text-text-secondary">Kapazität: {room.capacity} Personen</p>
+                <p className="text-text-secondary">Standort: {room.location}, {room.city}</p>
+                <p className="text-text-secondary">
+                  Kapazität: {room.capacity} Personen
+                  {room.sizeSquareMeters != null && ` · ${room.sizeSquareMeters} m²`}
+                </p>
                 <p className="text-lg font-semibold text-primary">
-                  {room.effectivePricePerNight < room.pricePerNight && (
+                  {room.effectivePricePerDay < room.pricePerDay && (
                     <span className="line-through text-text-muted font-normal mr-1.5">
-                      {currency.format(room.pricePerNight)}
+                      {currency.format(room.pricePerDay)}
                     </span>
                   )}
-                  {currency.format(room.effectivePricePerNight)} / Nacht
+                  {currency.format(room.effectivePricePerDay)} / Tag
                 </p>
+                {room.description && (
+                  <div className="pt-2 mt-1 border-t border-border-subtle">
+                    <h2 className="text-sm font-semibold text-text-primary mb-1.5">Über diesen Raum</h2>
+                    <p className="text-text-secondary whitespace-pre-line">{room.description}</p>
+                  </div>
+                )}
               </div>
             </Card>
 
@@ -255,14 +278,27 @@ export default function RoomDetailPage() {
                       onChange={(e) => setEditLocation(e.target.value)}
                     />
                     <TextInput
-                      label="Kapazität"
+                      label="Stadt"
+                      value={editCity}
+                      onChange={(e) => setEditCity(e.target.value)}
+                    />
+                    <TextInput
+                      label="Kapazität (Personen)"
                       type="number"
                       min={1}
                       value={editCapacity}
                       onChange={(e) => setEditCapacity(e.target.value === "" ? "" : Number(e.target.value))}
                     />
                     <TextInput
-                      label="Preis pro Nacht (€)"
+                      label="Größe (m²)"
+                      type="number"
+                      min={0}
+                      step="0.5"
+                      value={editSizeSquareMeters}
+                      onChange={(e) => setEditSizeSquareMeters(e.target.value === "" ? "" : Number(e.target.value))}
+                    />
+                    <TextInput
+                      label="Preis pro Tag (€)"
                       type="number"
                       min={0}
                       step="0.01"
@@ -280,6 +316,15 @@ export default function RoomDetailPage() {
                         </option>
                       ))}
                     </Select>
+
+                    <div className="sm:col-span-2">
+                      <Textarea
+                        label="Beschreibung"
+                        placeholder="Ausstattung, Atmosphäre, für welche Anlässe der Raum geeignet ist …"
+                        value={editDescription}
+                        onChange={(e) => setEditDescription(e.target.value)}
+                      />
+                    </div>
 
                     <div className="sm:col-span-2 grid gap-3">
                       {editError && <Alert variant="danger">{editError}</Alert>}
@@ -373,6 +418,8 @@ export default function RoomDetailPage() {
           </>
         )}
       </div>
+
+      <Footer />
     </div>
   );
 }

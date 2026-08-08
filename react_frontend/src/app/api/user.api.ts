@@ -12,6 +12,7 @@ export type User = {
 export type UpdateUserRequest = {
   username?: string;
   password?: string;
+  currentPassword?: string;
 };
 
 export async function fetchAllUsers(): Promise<User[]> {

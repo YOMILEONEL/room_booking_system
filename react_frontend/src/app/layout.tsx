@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Raumbuchungssystem",
+  title: "Spacio",
   description: "Räume planen und buchen",
 };
 

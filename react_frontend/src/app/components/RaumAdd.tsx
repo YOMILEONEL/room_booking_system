@@ -3,15 +3,18 @@
 import React, { useRef, useState } from "react";
 import RoomTable from "./RoomTable";
 import { createRoom, uploadRoomImage, type RoomStatus } from "../api/room.api";
-import { Card, Button, TextInput, Select, Alert } from "./ui";
+import { Card, Button, TextInput, Textarea, Select, Alert } from "./ui";
 
 const ROOM_STATUS: RoomStatus[] = ["VERFUGBAR", "GEBUCHT"];
 
 export default function RaumAdd() {
   const [name, setName] = useState("");
   const [capacity, setCapacity] = useState<number | "">("");
+  const [sizeSquareMeters, setSizeSquareMeters] = useState<number | "">("");
   const [location, setLocation] = useState("");
-  const [pricePerNight, setPricePerNight] = useState<number | "">("");
+  const [city, setCity] = useState("");
+  const [description, setDescription] = useState("");
+  const [pricePerDay, setPricePerDay] = useState<number | "">("");
   const [roomStatus, setRoomStatus] = useState<RoomStatus>("VERFUGBAR");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -29,20 +32,27 @@ export default function RaumAdd() {
     if (
       !name ||
       !location ||
+      !city ||
+      !description ||
       capacity === "" ||
       capacity <= 0 ||
-      pricePerNight === "" ||
-      pricePerNight <= 0
+      sizeSquareMeters === "" ||
+      sizeSquareMeters <= 0 ||
+      pricePerDay === "" ||
+      pricePerDay <= 0
     ) {
-      setError("Bitte Name, Kapazität (>0), Standort und Preis/Nacht (>0) ausfüllen.");
+      setError("Bitte Name, Kapazität (>0), Größe (>0), Standort, Stadt, Beschreibung und Preis/Tag (>0) ausfüllen.");
       return;
     }
 
     const newRoom = {
       name,
       capacity,
+      sizeSquareMeters,
       location,
-      pricePerNight,
+      city,
+      description,
+      pricePerDay,
       roomStatus,
     };
 
@@ -66,8 +76,11 @@ export default function RaumAdd() {
       );
       setName("");
       setCapacity("");
+      setSizeSquareMeters("");
       setLocation("");
-      setPricePerNight("");
+      setCity("");
+      setDescription("");
+      setPricePerDay("");
       setRoomStatus("VERFUGBAR");
       setImageFile(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -98,7 +111,13 @@ export default function RaumAdd() {
           />
 
           <TextInput
-            label="Kapazität"
+            label="Stadt"
+            value={city}
+            onChange={(e) => setCity(e.target.value)}
+          />
+
+          <TextInput
+            label="Kapazität (Personen)"
             type="number"
             min={1}
             value={capacity}
@@ -106,12 +125,21 @@ export default function RaumAdd() {
           />
 
           <TextInput
-            label="Preis pro Nacht (€)"
+            label="Größe (m²)"
+            type="number"
+            min={0}
+            step="0.5"
+            value={sizeSquareMeters}
+            onChange={(e) => setSizeSquareMeters(e.target.value === "" ? "" : Number(e.target.value))}
+          />
+
+          <TextInput
+            label="Preis pro Tag (€)"
             type="number"
             min={0}
             step="0.01"
-            value={pricePerNight}
-            onChange={(e) => setPricePerNight(e.target.value === "" ? "" : Number(e.target.value))}
+            value={pricePerDay}
+            onChange={(e) => setPricePerDay(e.target.value === "" ? "" : Number(e.target.value))}
           />
 
           <Select
@@ -125,6 +153,15 @@ export default function RaumAdd() {
               </option>
             ))}
           </Select>
+
+          <div className="sm:col-span-2">
+            <Textarea
+              label="Beschreibung"
+              placeholder="Ausstattung, Atmosphäre, für welche Anlässe der Raum geeignet ist …"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            />
+          </div>
 
           <label className="grid gap-1.5">
             <span className="text-sm font-semibold text-text-secondary">Foto (optional)</span>

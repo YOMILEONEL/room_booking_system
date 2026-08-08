@@ -6,6 +6,7 @@ import Link from "next/link";
 import { signIn, getSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import NavBar from "../components/NavBar";
+import Footer from "../components/Footer";
 import { Card, Button, TextInput, Select, Alert } from "../components/ui";
 import { registerUser, type CustomerType } from "../api/auth.api";
 import { extractErrorMessage } from "../api/apiClient";
@@ -230,6 +231,8 @@ function AuthForm() {
           )}
         </Card>
       </div>
+
+      <Footer />
     </div>
   );
 }

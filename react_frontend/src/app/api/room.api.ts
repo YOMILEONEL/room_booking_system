@@ -8,9 +8,12 @@ export type Room = {
   id: string;
   name: string;
   capacity: number;
+  sizeSquareMeters: number | null;
   location: string;
-  pricePerNight: number;
-  effectivePricePerNight: number;
+  city: string;
+  description: string;
+  pricePerDay: number;
+  effectivePricePerDay: number;
   roomStatus: RoomStatus;
   imageUrl?: string | null;
   active?: boolean;
@@ -20,8 +23,11 @@ export type Room = {
 export type CreateRoomRequest = {
   name: string;
   capacity: number;
+  sizeSquareMeters: number;
   location: string;
-  pricePerNight: number;
+  city: string;
+  description: string;
+  pricePerDay: number;
   roomStatus: RoomStatus;
 };
 

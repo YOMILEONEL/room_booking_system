@@ -4,6 +4,7 @@ import * as React from "react";
 import { useState } from "react";
 import Link from "next/link";
 import NavBar from "../components/NavBar";
+import Footer from "../components/Footer";
 import { Card, Button, TextInput, Alert } from "../components/ui";
 import { requestPasswordReset } from "../api/auth.api";
 
@@ -65,6 +66,8 @@ export default function ForgotPasswordPage() {
           </p>
         </Card>
       </div>
+
+      <Footer />
     </div>
   );
 }

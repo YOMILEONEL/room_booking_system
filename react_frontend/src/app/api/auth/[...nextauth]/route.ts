@@ -83,6 +83,7 @@ const handler = NextAuth({
         return {
           id: String(data.id),
           name: data.username,
+          displayName: data.displayName,
           role: data.role,
           customerType: data.customerType,
           accessToken: data.accessToken,
@@ -102,6 +103,7 @@ const handler = NextAuth({
       if (user) {
         token.role = user.role;
         token.customerType = user.customerType;
+        token.displayName = user.displayName;
         token.userId = user.id;
         token.accessToken = user.accessToken;
         token.refreshToken = user.refreshToken;
@@ -128,6 +130,7 @@ const handler = NextAuth({
       if (session.user) {
         session.user.role = token.role;
         session.user.customerType = token.customerType;
+        session.user.displayName = token.displayName;
         session.user.id = token.userId;
       }
       session.accessToken = token.accessToken;

@@ -4,8 +4,10 @@ import * as React from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import NavBar from "../components/NavBar";
+import Footer from "../components/Footer";
 import BookingTable from "../components/BookingTable";
 import { updateUser } from "../api/user.api";
+import { extractErrorMessage } from "../api/apiClient";
 import { Card, Button, TextInput, Alert } from "../components/ui";
 
 export default function ProfilePage() {
@@ -20,6 +22,7 @@ export default function ProfilePage() {
   const [savingUsername, setSavingUsername] = React.useState(false);
 
   const [editPassword, setEditPassword] = React.useState(false);
+  const [currentPassword, setCurrentPassword] = React.useState("");
   const [newPassword, setNewPassword] = React.useState("");
   const [confirmPassword, setConfirmPassword] = React.useState("");
   const [passwordError, setPasswordError] = React.useState<string | null>(null);
@@ -74,8 +77,8 @@ export default function ProfilePage() {
     setPasswordError(null);
     setPasswordSuccess(null);
 
-    if (!userId || !newPassword) {
-      setPasswordError("Bitte ein neues Passwort angeben.");
+    if (!userId || !currentPassword || !newPassword) {
+      setPasswordError("Bitte aktuelles und neues Passwort angeben.");
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -85,14 +88,15 @@ export default function ProfilePage() {
 
     setSavingPassword(true);
     try {
-      await updateUser(userId, { password: newPassword });
+      await updateUser(userId, { password: newPassword, currentPassword });
       setPasswordSuccess("Passwort wurde geändert.");
       setEditPassword(false);
+      setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
     } catch (err) {
       console.error("Fehler beim Ändern des Passworts:", err);
-      setPasswordError("Passwort konnte nicht geändert werden.");
+      setPasswordError(extractErrorMessage(err, "Passwort konnte nicht geändert werden."));
     } finally {
       setSavingPassword(false);
     }
@@ -164,6 +168,9 @@ export default function ProfilePage() {
                 onClick={() => {
                   setPasswordError(null);
                   setPasswordSuccess(null);
+                  setCurrentPassword("");
+                  setNewPassword("");
+                  setConfirmPassword("");
                   setEditPassword((v) => !v);
                 }}
                 className="text-sm font-medium text-primary hover:text-primary-hover transition-colors"
@@ -180,6 +187,13 @@ export default function ProfilePage() {
 
             {editPassword && (
               <form onSubmit={handleSavePassword} className="grid gap-4">
+                <TextInput
+                  label="Aktuelles Passwort"
+                  type="password"
+                  autoComplete="current-password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                />
                 <TextInput
                   label="Neues Passwort"
                   type="password"
@@ -211,6 +225,8 @@ export default function ProfilePage() {
 
         <BookingTable />
       </div>
+
+      <Footer />
     </div>
   );
 }

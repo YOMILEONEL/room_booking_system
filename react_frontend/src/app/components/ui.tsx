@@ -61,6 +61,23 @@ export function TextInput({
   );
 }
 
+export function Textarea({
+  label,
+  className = "",
+  ...props
+}: React.TextareaHTMLAttributes<HTMLTextAreaElement> & { label: string }) {
+  return (
+    <label className="grid gap-1.5">
+      <span className="text-sm font-semibold text-text-secondary">{label}</span>
+      <textarea
+        rows={4}
+        className={`px-3.5 py-2.5 rounded-xl border border-border-subtle bg-black/[0.03] text-text-primary placeholder:text-text-muted outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/20 resize-y ${className}`}
+        {...props}
+      />
+    </label>
+  );
+}
+
 export function Select({
   label,
   className = "",

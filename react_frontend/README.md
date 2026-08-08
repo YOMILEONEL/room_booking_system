@@ -1,6 +1,6 @@
-# Raumbuchungssystem — Frontend
+# Spacio — Frontend
 
-Next.js-Frontend (App Router) für das [Raumbuchungssystem](../README.md). Spricht ausschließlich
+Next.js-Frontend (App Router) für [Spacio](../README.md). Spricht ausschließlich
 über REST mit dem separaten Spring-Boot-Backend (`../bookingssystem`); Authentifizierung läuft
 über NextAuth mit einem Credentials-Provider gegen die Backend-Login-Route.
 

@@ -72,7 +72,7 @@ export default function AdminOverviewPage() {
     <div className="grid gap-8">
       <div>
         <h1 className="text-2xl font-bold">Willkommen, {session?.user?.name}.</h1>
-        <p className="text-sm text-text-secondary mt-1">Hier ist der aktuelle Stand deines Raumbuchungssystems.</p>
+        <p className="text-sm text-text-secondary mt-1">Hier ist der aktuelle Stand von Spacio.</p>
       </div>
 
       {error && <Alert variant="danger">{error}</Alert>}

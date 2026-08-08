@@ -5,6 +5,7 @@ import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import NavBar from "../components/NavBar";
+import Footer from "../components/Footer";
 import { Card, Button, TextInput, Alert } from "../components/ui";
 import { resetPassword } from "../api/auth.api";
 
@@ -100,6 +101,8 @@ export default function ResetPasswordPage() {
           <ResetPasswordForm />
         </Suspense>
       </div>
+
+      <Footer />
     </div>
   );
 }

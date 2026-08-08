@@ -4,13 +4,14 @@ import * as React from "react";
 import Link from "next/link";
 import { fetchRooms, activateRoom, deactivateRoom, type Room } from "../api/room.api";
 import { roomImages, defaultRoomImage } from "../lib/roomImages";
-import { Card, Badge, Alert } from "./ui";
+import { Card, Badge, Alert, TextInput } from "./ui";
 
 const currency = new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" });
 
 export default function RoomTable({ isAdmin = false }: { isAdmin?: boolean }) {
   const [rooms, setRooms] = React.useState<Room[]>([]);
   const [error, setError] = React.useState<string | null>(null);
+  const [query, setQuery] = React.useState("");
 
   const loadRooms = React.useCallback(async () => {
     try {
@@ -41,9 +42,26 @@ export default function RoomTable({ isAdmin = false }: { isAdmin?: boolean }) {
     }
   };
 
+  const normalizedQuery = query.trim().toLowerCase();
+  const filteredRooms = normalizedQuery
+    ? rooms.filter((room) => {
+        const haystack = `${room.name} ${room.city ?? ""} ${room.description ?? ""}`.toLowerCase();
+        return haystack.includes(normalizedQuery);
+      })
+    : rooms;
+
   return (
     <div>
       <h2 className="text-lg font-bold mb-4">Räume</h2>
+
+      <div className="mb-5 max-w-sm">
+        <TextInput
+          label="Suche"
+          placeholder="Stadt, Raumname oder Anlass …"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+      </div>
 
       {error && (
         <div className="mb-4">
@@ -55,8 +73,12 @@ export default function RoomTable({ isAdmin = false }: { isAdmin?: boolean }) {
         <p className="text-text-muted text-sm">Keine Räume gefunden.</p>
       )}
 
+      {rooms.length > 0 && filteredRooms.length === 0 && !error && (
+        <p className="text-text-muted text-sm">Keine Räume passen zu &bdquo;{query}&ldquo;.</p>
+      )}
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {rooms.map((room) => {
+        {filteredRooms.map((room) => {
           const imgSrc = room.imageUrl ?? roomImages[room.name] ?? defaultRoomImage;
           const available = room.roomStatus === "VERFUGBAR";
           const isInactive = room.active === false;
@@ -86,15 +108,18 @@ export default function RoomTable({ isAdmin = false }: { isAdmin?: boolean }) {
                       )}
                     </div>
                   </div>
-                  <p className="text-sm text-text-secondary">{room.location}</p>
-                  <p className="text-sm text-text-muted">Kapazität: {room.capacity}</p>
+                  <p className="text-sm text-text-secondary">{room.location}, {room.city}</p>
+                  <p className="text-sm text-text-muted">
+                    Kapazität: {room.capacity}
+                    {room.sizeSquareMeters != null && ` · ${room.sizeSquareMeters} m²`}
+                  </p>
                   <p className="text-sm font-semibold text-primary mt-auto">
-                    {room.effectivePricePerNight < room.pricePerNight && (
+                    {room.effectivePricePerDay < room.pricePerDay && (
                       <span className="line-through text-text-muted font-normal mr-1.5">
-                        {currency.format(room.pricePerNight)}
+                        {currency.format(room.pricePerDay)}
                       </span>
                     )}
-                    {currency.format(room.effectivePricePerNight)} / Nacht
+                    {currency.format(room.effectivePricePerDay)} / Tag
                   </p>
                 </div>
               </Link>

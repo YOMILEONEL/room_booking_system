@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { ConfirmDialog } from "./ui";
+import LogoMark from "./LogoMark";
 
 export default function NavBar() {
   const router = useRouter();
@@ -19,9 +20,10 @@ export default function NavBar() {
       <div className="max-w-6xl mx-auto flex items-center justify-between gap-4 px-4 sm:px-6 py-3.5">
         <Link
           href="/"
-          className="font-bold text-base sm:text-lg tracking-tight hover:text-primary transition-colors"
+          className="flex items-center gap-2 font-bold text-base sm:text-lg tracking-tight hover:text-primary transition-colors"
         >
-          Raumbuchungssystem
+          <LogoMark className="w-6 h-6 sm:w-7 sm:h-7 text-primary" />
+          Spacio
         </Link>
 
         <nav className="flex items-center gap-2 sm:gap-3">
@@ -55,7 +57,7 @@ export default function NavBar() {
                 </Link>
               )}
               <span className="hidden sm:inline text-sm text-text-muted px-1">
-                {session.user?.name}
+                {session.user?.displayName ?? session.user?.name}
               </span>
               <button
                 onClick={() => setConfirmLogout(true)}
