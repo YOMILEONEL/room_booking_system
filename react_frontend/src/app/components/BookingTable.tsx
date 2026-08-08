@@ -4,6 +4,8 @@ import React, { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { fetchBookingsForUser, deleteBooking, type Booking } from "../api/booking.api";
 import { confirmPayment } from "../api/payment.api";
+import { fetchInvoicePdf } from "../api/invoice.api";
+import { extractErrorMessage } from "../api/apiClient";
 import { roomImages, defaultRoomImage } from "../lib/roomImages";
 import { Card, Badge, Button, Alert } from "./ui";
 
@@ -18,6 +20,7 @@ const BookingTable: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   const getBookingStatus = (
     start: string,
@@ -67,7 +70,25 @@ const BookingTable: React.FC = () => {
       setBookings((prev) => prev.filter((b) => b.bookingId !== bookingId));
     } catch (err) {
       console.error(err);
-      alert("Fehler beim Löschen");
+      alert(extractErrorMessage(err, "Fehler beim Löschen"));
+    }
+  };
+
+  const handleDownloadInvoice = async (booking: Booking) => {
+    setDownloadingId(booking.bookingId);
+    try {
+      const blob = await fetchInvoicePdf(booking.bookingId);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `Rechnung-${booking.room?.name ?? booking.bookingId}.pdf`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error(err);
+      alert(extractErrorMessage(err, "Rechnung konnte nicht heruntergeladen werden."));
+    } finally {
+      setDownloadingId(null);
     }
   };
 
@@ -99,6 +120,7 @@ const BookingTable: React.FC = () => {
         {bookings.map((booking) => {
           const { room, user, startTime, endTime, payment } = booking;
           const status = getBookingStatus(startTime, endTime);
+          const canDelete = status !== "Laufend" && payment?.status !== "PAID";
           const imageSrc = room?.imageUrl ?? (room?.name ? roomImages[room.name] : undefined) ?? defaultRoomImage;
 
           return (
@@ -108,12 +130,14 @@ const BookingTable: React.FC = () => {
               <div className="p-4 flex-1 flex flex-col gap-2">
                 <div className="flex items-start justify-between gap-2">
                   <h3 className="font-semibold">{room?.name}</h3>
-                  <button
-                    onClick={() => handleDeleteBooking(booking.bookingId)}
-                    className="text-xs font-medium text-danger hover:text-danger/80 transition-colors"
-                  >
-                    Löschen
-                  </button>
+                  {canDelete && (
+                    <button
+                      onClick={() => handleDeleteBooking(booking.bookingId)}
+                      className="text-xs font-medium text-danger hover:text-danger/80 transition-colors"
+                    >
+                      Löschen
+                    </button>
+                  )}
                 </div>
 
                 <p className="text-sm text-text-secondary">Standort: {room?.location}</p>
@@ -151,6 +175,17 @@ const BookingTable: React.FC = () => {
                       </p>
                     )}
                   </div>
+                )}
+
+                {payment && payment.status === "PAID" && (
+                  <Button
+                    variant="secondary"
+                    className="mt-2 text-xs py-2"
+                    disabled={downloadingId === booking.bookingId}
+                    onClick={() => handleDownloadInvoice(booking)}
+                  >
+                    {downloadingId === booking.bookingId ? "Wird geladen..." : "Rechnung herunterladen"}
+                  </Button>
                 )}
 
                 {isAdmin && payment && payment.status === "PENDING" && (

@@ -1,7 +1,7 @@
 import { getSession } from "next-auth/react";
 import { BACKEND_BASE_URL } from "./http";
 
-export type ApiFetchResponseType = "json" | "text";
+export type ApiFetchResponseType = "json" | "text" | "blob";
 
 type ApiFetchOptions = Omit<RequestInit, "headers" | "body"> & {
   auth?: boolean;
@@ -57,6 +57,10 @@ export async function apiFetch<T>(
 
   if (responseType === "text") {
     return (await res.text()) as unknown as T;
+  }
+
+  if (responseType === "blob") {
+    return (await res.blob()) as unknown as T;
   }
 
   const text = await res.text();

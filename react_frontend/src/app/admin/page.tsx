@@ -154,9 +154,9 @@ export default function AdminOverviewPage() {
                   <p className="font-medium truncate">{b.room?.name}</p>
                   <p className="text-xs text-text-muted truncate">{b.user?.username}</p>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex flex-col items-end gap-1.5 shrink-0">
                   {b.payment && (
-                    <span className="text-sm font-semibold text-primary">
+                    <span className="text-sm font-semibold text-primary whitespace-nowrap">
                       {currency.format(b.payment.amount)}
                     </span>
                   )}
