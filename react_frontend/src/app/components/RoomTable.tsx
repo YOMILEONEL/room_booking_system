@@ -1,45 +1,21 @@
 "use client";
 
 import * as React from "react";
-import {
-  Box,
-  Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  TablePagination,
-  Toolbar,
-  Typography,
-  IconButton,
-  Tooltip,
-} from "@mui/material";
-import DeleteIcon from "@mui/icons-material/Delete";
-import { apiFetch } from "../api/apiClient";
+import Link from "next/link";
+import { fetchRooms, activateRoom, deactivateRoom, type Room } from "../api/room.api";
 import { roomImages, defaultRoomImage } from "../lib/roomImages";
+import { Card, Badge, Alert } from "./ui";
 
-type Room = {
-  id: number;
-  name: string;
-  capacity: number;
-  location: string;
-  roomStatus: string;
-};
+const currency = new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" });
 
-export default function RoomTable() {
+export default function RoomTable({ isAdmin = false }: { isAdmin?: boolean }) {
   const [rooms, setRooms] = React.useState<Room[]>([]);
   const [error, setError] = React.useState<string | null>(null);
 
-  const [page, setPage] = React.useState(0);
-  const [rowsPerPage, setRowsPerPage] = React.useState(5);
-
-  // Räume laden
   const loadRooms = React.useCallback(async () => {
     try {
       setError(null);
-      const data = await apiFetch<Room[]>("/room/Get");
+      const data = await fetchRooms();
       setRooms(data);
     } catch (err) {
       console.error("Fehler beim Laden der Räume:", err);
@@ -51,134 +27,89 @@ export default function RoomTable() {
     loadRooms();
   }, [loadRooms]);
 
-  // Raum löschen
-  const handleDelete = async (id: number) => {
-    const confirmed = window.confirm(`Raum mit ID ${id} wirklich löschen?`);
-    if (!confirmed) return;
-
+  const handleToggleActive = async (room: Room) => {
     try {
-      await apiFetch(`/room/delete/${id}`, { method: "DELETE" });
-      // Lokal aus der Liste entfernen
-      setRooms((prev) => prev.filter((r) => r.id !== id));
+      if (room.active === false) {
+        await activateRoom(room.id);
+      } else {
+        await deactivateRoom(room.id);
+      }
+      loadRooms();
     } catch (err) {
-      console.error("Fehler beim Löschen:", err);
-      alert("Es ist ein Fehler beim Löschen aufgetreten.");
+      console.error("Fehler beim Ändern des Status:", err);
+      alert("Status konnte nicht geändert werden.");
     }
   };
 
-  // Pagination-Handler
-  const handleChangePage = (_: unknown, newPage: number) => {
-    setPage(newPage);
-  };
-
-  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setRowsPerPage(parseInt(event.target.value, 10));
-    setPage(0);
-  };
-
-  const pagedRooms = React.useMemo(
-    () =>
-      rooms.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage),
-    [rooms, page, rowsPerPage]
-  );
-
   return (
-    <Box sx={{ width: "100%" }}>
+    <div>
+      <h2 className="text-lg font-bold mb-4">Räume</h2>
+
       {error && (
-        <Typography color="error" sx={{ mb: 2 }}>
-          {error}
-        </Typography>
+        <div className="mb-4">
+          <Alert variant="danger">{error}</Alert>
+        </div>
       )}
 
-      <Paper sx={{ width: "100%", mb: 2 }}>
-        <Toolbar>
-          <Typography variant="h6" sx={{ flex: 1 }}>
-            Räume
-          </Typography>
-        </Toolbar>
+      {rooms.length === 0 && !error && (
+        <p className="text-text-muted text-sm">Keine Räume gefunden.</p>
+      )}
 
-        <TableContainer>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Foto</TableCell>
-                <TableCell>Raumname</TableCell>
-                <TableCell align="right">Kapazität</TableCell>
-                <TableCell>Standort</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell align="center">Aktionen</TableCell>
-              </TableRow>
-            </TableHead>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {rooms.map((room) => {
+          const imgSrc = room.imageUrl ?? roomImages[room.name] ?? defaultRoomImage;
+          const available = room.roomStatus === "VERFUGBAR";
+          const isInactive = room.active === false;
 
-            <TableBody>
-              {pagedRooms.map((room) => {
-                const imgSrc =
-                  roomImages[room.name] ?? defaultRoomImage;
-
-                return (
-                  <TableRow key={room.id} hover>
-                    {/* Foto */}
-                    <TableCell>
-                      <img
-                        src={imgSrc}
-                        alt={room.name}
-                        style={{
-                          width: 80,
-                          height: 60,
-                          objectFit: "cover",
-                          borderRadius: 4,
-                        }}
-                      />
-                    </TableCell>
-
-                    {/* Name */}
-                    <TableCell>{room.name}</TableCell>
-
-                    {/* Kapazität */}
-                    <TableCell align="right">{room.capacity}</TableCell>
-
-                    {/* Standort */}
-                    <TableCell>{room.location}</TableCell>
-
-                    {/* Status */}
-                    <TableCell>{room.roomStatus}</TableCell>
-
-                    {/* Aktionen */}
-                    <TableCell align="center">
-                      <Tooltip title="Löschen">
-                        <IconButton
-                          color="error"
-                          onClick={() => handleDelete(room.id)}
-                        >
-                          <DeleteIcon />
-                        </IconButton>
-                      </Tooltip>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-
-              {rooms.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={6} align="center">
-                    Keine Räume gefunden.
-                  </TableCell>
-                </TableRow>
+          return (
+            <Card
+              key={room.id}
+              className={`p-0 overflow-hidden flex flex-col ${isInactive ? "opacity-60" : ""}`}
+            >
+              <Link href={`/rooms/${room.id}`} className="flex flex-col flex-1">
+                <img
+                  src={imgSrc}
+                  alt={room.name}
+                  className="w-full h-36 object-cover"
+                />
+                <div className="p-4 flex-1 flex flex-col gap-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <h3 className="font-semibold">{room.name}</h3>
+                    <div className="flex flex-col items-end gap-1">
+                      {isInactive && <Badge variant="neutral">Inaktiv</Badge>}
+                      {room.bookedUntil ? (
+                        <Badge variant="pending">Gebucht bis {room.bookedUntil}</Badge>
+                      ) : (
+                        <Badge variant={available ? "success" : "neutral"}>
+                          {available ? "Verfügbar" : "Gebucht"}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                  <p className="text-sm text-text-secondary">{room.location}</p>
+                  <p className="text-sm text-text-muted">Kapazität: {room.capacity}</p>
+                  <p className="text-sm font-semibold text-primary mt-auto">
+                    {room.effectivePricePerNight < room.pricePerNight && (
+                      <span className="line-through text-text-muted font-normal mr-1.5">
+                        {currency.format(room.pricePerNight)}
+                      </span>
+                    )}
+                    {currency.format(room.effectivePricePerNight)} / Nacht
+                  </p>
+                </div>
+              </Link>
+              {isAdmin && (
+                <button
+                  onClick={() => handleToggleActive(room)}
+                  className="text-sm font-medium text-text-secondary hover:text-text-primary transition-colors self-start mx-4 mb-4"
+                >
+                  {isInactive ? "Aktivieren" : "Deaktivieren"}
+                </button>
               )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-
-        <TablePagination
-          rowsPerPageOptions={[5, 10, 25]}
-          component="div"
-          count={rooms.length}
-          rowsPerPage={rowsPerPage}
-          page={page}
-          onPageChange={handleChangePage}
-          onRowsPerPageChange={handleChangeRowsPerPage}
-        />
-      </Paper>
-    </Box>
+            </Card>
+          );
+        })}
+      </div>
+    </div>
   );
 }

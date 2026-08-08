@@ -1,106 +1,51 @@
 "use client";
 import * as React from "react";
-import Paper from "@mui/material/Paper";
-import Table from "@mui/material/Table";
-import TableBody from "@mui/material/TableBody";
-import TableCell from "@mui/material/TableCell";
-import TableContainer from "@mui/material/TableContainer";
-import TableHead from "@mui/material/TableHead";
-import TablePagination from "@mui/material/TablePagination";
-import TableRow from "@mui/material/TableRow";
-import { Role } from "../regist/Role";
-
-
-interface Column {
-  id: "id" | "username" | "role";
-  label: string;
-  minWidth?: number;
-  align?: "right";
-}
-
-const columns: readonly Column[] = [
-  { id: "id", label: "ID", minWidth: 50 },
-  { id: "username", label: "Username", minWidth: 150 },
-  { id: "role", label: "Role", minWidth: 150 },
-];
-
-interface User {
-  id: number;
-  username: string;
-  role: Role;
-}
+import type { User } from "../api/user.api";
+import { Card, Badge } from "./ui";
 
 interface UserTableProps {
   users: User[];
-  onDelete: (id: number) => void;
+  onDelete: (id: string) => void;
 }
 
 export default function UserTable({ users, onDelete }: UserTableProps) {
-  const [page, setPage] = React.useState(0);
-  const [rowsPerPage, setRowsPerPage] = React.useState(5);
-
-  const handleChangePage = (event: unknown, newPage: number) => {
-    setPage(newPage);
-  };
-
-  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setRowsPerPage(+event.target.value);
-    setPage(0);
-  };
+  if (users.length === 0) {
+    return <p className="text-text-muted text-sm">Keine Benutzer gefunden.</p>;
+  }
 
   return (
-    <Paper sx={{ width: "100%", overflow: "hidden" }}>
-      <TableContainer sx={{ maxHeight: 440 }}>
-        <Table stickyHeader aria-label="sticky table">
-          <TableHead>
-            <TableRow>
-              {columns.map((column) => (
-                <TableCell
-                  key={column.id}
-                  align={column.align}
-                  style={{ minWidth: column.minWidth }}
-                >
-                  {column.label}
-                </TableCell>
-              ))}
-              <TableCell align="right">Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {users
-              .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-              .map((user) => (
-                <TableRow hover role="checkbox" tabIndex={-1} key={user.id}>
-                  {columns.map((column) => {
-                    const value = user[column.id];
-                    return (
-                      <TableCell key={column.id} align={column.align}>
-                        {column.id === "role" ? Role[value as keyof typeof Role] : value}
-                      </TableCell>
-                    );
-                  })}
-                  <TableCell align="right">
-                    <button
-                      onClick={() => onDelete(user.id)}
-                      style={{ color: "red", cursor: "pointer" }}
-                    >
-                      Delete
-                    </button>
-                  </TableCell>
-                </TableRow>
-              ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-      <TablePagination
-        rowsPerPageOptions={[5, 10, 25]}
-        component="div"
-        count={users.length}
-        rowsPerPage={rowsPerPage}
-        page={page}
-        onPageChange={handleChangePage}
-        onRowsPerPageChange={handleChangeRowsPerPage}
-      />
-    </Paper>
+    <Card className="p-0 overflow-hidden">
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-border-subtle text-left text-text-secondary">
+              <th className="px-4 py-3 font-semibold">ID</th>
+              <th className="px-4 py-3 font-semibold">Benutzername</th>
+              <th className="px-4 py-3 font-semibold">Rolle</th>
+              <th className="px-4 py-3 font-semibold text-right">Aktionen</th>
+            </tr>
+          </thead>
+          <tbody>
+            {users.map((user) => (
+              <tr key={user.id} className="border-b border-border-subtle last:border-0 hover:bg-black/[0.02]">
+                <td className="px-4 py-3 text-text-muted">{user.id}</td>
+                <td className="px-4 py-3">{user.username}</td>
+                <td className="px-4 py-3">
+                  <Badge variant={user.role === "ADMIN" ? "info" : "neutral"}>{user.role}</Badge>
+                </td>
+                <td className="px-4 py-3 text-right">
+                  <button
+                    onClick={() => onDelete(user.id)}
+                    className="text-danger hover:text-danger/80 font-medium transition-colors"
+                  >
+                    Löschen
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </Card>
   );
 }

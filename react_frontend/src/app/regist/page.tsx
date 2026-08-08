@@ -1,148 +1,160 @@
 "use client";
 import * as React from "react";
-import AppBar from "@mui/material/AppBar";
-import Box from "@mui/material/Box";
-import Toolbar from "@mui/material/Toolbar";
-import Typography from "@mui/material/Typography";
-import { Button, Paper, MenuItem, Select, FormControl, InputLabel } from "@mui/material";
 import { useState, useEffect } from "react";
-import NavBar from "../components/NavBar";
-import TextField from "@mui/material/TextField";
-import { Role } from "./Role";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
-import { BACKEND_BASE_URL } from "../api/http";
-
-
+import NavBar from "../components/NavBar";
+import { Card, Button, TextInput, Select, Alert } from "../components/ui";
+import { registerUser, type CustomerType } from "../api/auth.api";
+import { extractErrorMessage } from "../api/apiClient";
 
 export default function Registration() {
   const [username, setUsername] = useState<string>("");
   const [password, setPassword] = useState<string>("");
-  const [role, setRole] = useState<Role | null>(null);
-  const [registStatus, setRegistStatus]= useState<Boolean>(false);
+  const [customerType, setCustomerType] = useState<CustomerType>("KUNDE");
+  const [organisationName, setOrganisationName] = useState<string>("");
+  const [firstName, setFirstName] = useState<string>("");
+  const [lastName, setLastName] = useState<string>("");
+  const [phoneNumber, setPhoneNumber] = useState<string>("");
+  const [error, setError] = useState<string>("");
+  const [loading, setLoading] = useState<boolean>(false);
+  const [registStatus, setRegistStatus] = useState<boolean>(false);
   const router = useRouter();
-  
+
   useEffect(() => {
     if (registStatus) {
-      router.push("/homePage");
+      router.push("/rooms");
     }
   }, [registStatus, router]);
 
-  const HandleAddUser = async (e: React.MouseEvent<HTMLButtonElement>) => {
+  const handleAddUser = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!username || !password || !role) {
-      alert("Bitte alle Felder ausfüllen!");
+    setError("");
+
+    if (!username || !password || !phoneNumber.trim()) {
+      setError("Bitte alle Felder ausfüllen.");
       return;
-      
     }
-    const user = { username, password, role };
+    if (customerType === "ORGANISATION" && !organisationName.trim()) {
+      setError("Bitte den Namen der Organisation angeben.");
+      return;
+    }
+    if (customerType === "KUNDE" && (!firstName.trim() || !lastName.trim())) {
+      setError("Bitte Vor- und Nachnamen angeben.");
+      return;
+    }
+
+    setLoading(true);
 
     try {
-      const response = await fetch(`${BACKEND_BASE_URL}/api/register`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(user),
+      await registerUser({
+        username,
+        password,
+        customerType,
+        organisationName: customerType === "ORGANISATION" ? organisationName.trim() : undefined,
+        firstName: customerType === "KUNDE" ? firstName.trim() : undefined,
+        lastName: customerType === "KUNDE" ? lastName.trim() : undefined,
+        phoneNumber: phoneNumber.trim(),
       });
 
-      if (response.ok) {
-        console.log("New user added");
-        // direkt einloggen, damit eine Session für /homePage existiert
-        const result = await signIn("credentials", {
-          username,
-          password,
-          redirect: false,
-        });
-        if (!result?.error) {
-          setRegistStatus(true);
-        } else {
-          alert("Registrierung erfolgreich, Login fehlgeschlagen. Bitte manuell einloggen.");
-          router.push("/login");
-        }
+      // direkt einloggen, damit sofort eine Session existiert
+      const result = await signIn("credentials", {
+        username,
+        password,
+        redirect: false,
+      });
+      if (!result?.error) {
+        setRegistStatus(true);
       } else {
-        console.error("Failed to add user");
+        setError("Registrierung erfolgreich, Login fehlgeschlagen. Bitte manuell einloggen.");
+        router.push("/login");
       }
-    } catch (error) {
-      console.error("Error:", error);
+    } catch (err) {
+      console.error("Error:", err);
+      setError(extractErrorMessage(err, "Registrierung fehlgeschlagen."));
+    } finally {
+      setLoading(false);
     }
-
-    setUsername("");
-    setPassword("");
-    setRole(null);
   };
 
   return (
-    <Box>
+    <div>
       <NavBar />
-      <Box>
-        <Paper
-          elevation={6}
-          sx={{
-            margin: "20px auto",
-            padding: "30px",
-            textAlign: "center",
-            maxWidth: 500,
-            backgroundColor: "#f9f9f9",
-            borderRadius: "10px",
-          }}
-        >
-          <h1
-            className="title"
-            style={{ fontSize: "24px", marginBottom: "20px", color: "#333" }}
-          >
-            Registrieren Sie sich bitte!
-          </h1>
-          <form
-            className="input"
-            style={{ display: "flex", flexDirection: "column", gap: "15px" }}
-          >
-            <TextField
-              id="username"
-              label="Name"
-              variant="outlined"
-              fullWidth
+      <div className="max-w-md mx-auto px-4 py-16">
+        <Card>
+          <h1 className="text-2xl font-bold mb-6">Konto erstellen</h1>
+
+          <form onSubmit={handleAddUser} className="grid gap-4">
+            <TextInput
+              label="Benutzername"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
+              autoComplete="username"
             />
-            <TextField
-              id="password"
-              label="Password"
-              variant="outlined"
+            <TextInput
+              label="Passwort"
               type="password"
-              fullWidth
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              autoComplete="new-password"
             />
-            <FormControl fullWidth>
-              <InputLabel id="role-label">Rolle</InputLabel>
-              <Select
-                labelId="role-label"
-                id="role"
-                value={role || ""}
-                onChange={(e) => setRole(e.target.value as Role)}
-                label="Rolle"
-              >
-                <MenuItem value={Role.MEMBER}>MEMBER</MenuItem>
-                <MenuItem value={Role.ADMIN}>ADMIN</MenuItem>
-                
-              </Select>
-            </FormControl>
-            <Button
-              variant="contained"
-              sx={{
-                padding: "10px",
-                fontWeight: "bold",
-                backgroundColor: "#1976d2",
-                "&:hover": {
-                  backgroundColor: "#145a96",
-                },
-              }}
-              onClick={HandleAddUser}
+
+            <Select
+              label="Kontotyp"
+              value={customerType}
+              onChange={(e) => setCustomerType(e.target.value as CustomerType)}
             >
-              Add New User
+              <option value="KUNDE">Kunde</option>
+              <option value="ORGANISATION">Organisation</option>
+            </Select>
+
+            {customerType === "ORGANISATION" ? (
+              <TextInput
+                label="Organisationsname"
+                value={organisationName}
+                onChange={(e) => setOrganisationName(e.target.value)}
+              />
+            ) : (
+              <>
+                <TextInput
+                  label="Vorname"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  autoComplete="given-name"
+                />
+                <TextInput
+                  label="Nachname"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  autoComplete="family-name"
+                />
+              </>
+            )}
+
+            <TextInput
+              label="Telefonnummer"
+              type="tel"
+              value={phoneNumber}
+              onChange={(e) => setPhoneNumber(e.target.value)}
+              autoComplete="tel"
+            />
+
+            {error && <Alert variant="danger">{error}</Alert>}
+
+            <Button type="submit" disabled={loading} className="w-full mt-2">
+              {loading ? "Wird registriert..." : "Registrieren"}
             </Button>
           </form>
-        </Paper>
-      </Box>
-    </Box>
+
+          <p className="text-sm text-text-muted mt-6 text-center">
+            Schon ein Konto?{" "}
+            <Link href="/login" className="text-primary hover:text-primary-hover font-medium">
+              Jetzt einloggen
+            </Link>
+          </p>
+        </Card>
+      </div>
+    </div>
   );
 }

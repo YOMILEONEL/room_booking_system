@@ -24,8 +24,11 @@ export async function apiFetch<T>(
     accessToken = session?.accessToken;
   }
 
+  const isFormData = body instanceof FormData;
+
   const finalHeaders: Record<string, string> = {
-    "Content-Type": "application/json",
+    // Omitted for FormData - the browser sets its own multipart boundary in Content-Type.
+    ...(isFormData ? {} : { "Content-Type": "application/json" }),
     ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
     ...(headers ?? {}),
   };
@@ -33,7 +36,7 @@ export async function apiFetch<T>(
   const res = await fetch(url, {
     ...rest,
     headers: finalHeaders,
-    body: body === undefined ? undefined : JSON.stringify(body),
+    body: body === undefined ? undefined : isFormData ? (body as FormData) : JSON.stringify(body),
   });
 
   if (!res.ok) {
@@ -61,4 +64,24 @@ export async function apiFetch<T>(
     return undefined as T;
   }
   return JSON.parse(text) as T;
+}
+
+// apiFetch's thrown Error buries the backend's JSON error body (e.g. {"error": "..."}) inside
+// its message as "<status> <statusText> – <body>". This pulls the actual "error" field back out
+// so callers can show the specific backend reason instead of a generic fallback message.
+export function extractErrorMessage(err: unknown, fallback: string): string {
+  if (err instanceof Error) {
+    const match = err.message.match(/–\s*(\{.*\})\s*$/);
+    if (match) {
+      try {
+        const parsed = JSON.parse(match[1]);
+        if (typeof parsed?.error === "string") {
+          return parsed.error;
+        }
+      } catch {
+        // not JSON - fall through to the fallback
+      }
+    }
+  }
+  return fallback;
 }

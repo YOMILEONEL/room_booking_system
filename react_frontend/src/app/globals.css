@@ -3,24 +3,49 @@
 @tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg-main: #ffffff;
+  --bg-card: #f7f7f8;
+  --bg-card-hover: #eeeef0;
+  --border-subtle: #e2e2e7;
+
+  --text-primary: #16161a;
+  --text-secondary: #55555f;
+  --text-muted: #8a8a92;
+
+  --color-primary: #3b82f6;
+  --color-primary-hover: #2563eb;
+
+  --color-success: #22c55e;
+  --color-danger: #ef4444;
+  --color-warning: #f59e0b;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  margin: 0;
+  min-height: 100dvh;
+  background: var(--bg-main);
+  color: var(--text-primary);
+  font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
-.startfotos{
-  display: flex;
-  flex-direction: row;
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-subtle);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-main);
 }

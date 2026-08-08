@@ -1,12 +1,12 @@
 "use client";
 
 import * as React from "react";
-import Box from "@mui/material/Box";
-import { Button, Paper, TextField } from "@mui/material";
 import { useState } from "react";
-import NavBar from "../components/NavBar"; // Pfad ggf. anpassen
-import { signIn } from "next-auth/react";
+import Link from "next/link";
+import { signIn, getSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import NavBar from "../components/NavBar";
+import { Card, Button, TextInput, Alert } from "../components/ui";
 
 export default function Login() {
   const [username, setUsername] = useState<string>("");
@@ -29,87 +29,65 @@ export default function Login() {
     const result = await signIn("credentials", {
       username,
       password,
-      redirect: false,   // kein Auto-Redirect durch NextAuth
+      redirect: false,
     });
 
     setLoading(false);
 
-    // Fehler vom Credentials-Provider (inkl. 401 von deinem Backend)
     if (result?.error) {
       console.error("Login-Fehler:", result.error);
       setError("Benutzername oder Passwort falsch!");
       return;
     }
 
-    // Erfolgreich → manuelle Weiterleitung
-    router.push("/homePage");
+    // Admins landen im Admin-Dashboard, Kunden bleiben auf der normalen Seite.
+    const session = await getSession();
+    router.push(session?.user?.role === "ADMIN" ? "/admin" : "/rooms");
   };
 
   return (
-    <Box>
+    <div>
       <NavBar />
-      <Box>
-        <Paper
-          elevation={6}
-          sx={{
-            margin: "20px auto",
-            padding: "30px",
-            textAlign: "center",
-            maxWidth: 500,
-            backgroundColor: "#f9f9f9",
-            borderRadius: "10px",
-          }}
-        >
-          <h1
-            style={{ fontSize: "24px", marginBottom: "20px", color: "#333" }}
-          >
-            Loggen Sie sich bitte ein!
-          </h1>
+      <div className="max-w-md mx-auto px-4 py-16">
+        <Card>
+          <h1 className="text-2xl font-bold mb-6">Willkommen zurück</h1>
 
-          <form
-            onSubmit={handleLogin}
-            style={{ display: "flex", flexDirection: "column", gap: "15px" }}
-          >
-            <TextField
-              id="username"
-              label="Name"
-              variant="outlined"
-              fullWidth
+          <form onSubmit={handleLogin} className="grid gap-4">
+            <TextInput
+              label="Benutzername"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
+              autoComplete="username"
             />
-            <TextField
-              id="password"
-              label="Password"
-              variant="outlined"
+            <TextInput
+              label="Passwort"
               type="password"
-              fullWidth
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
             />
 
-            {error && (
-              <p style={{ color: "red", margin: 0 }}>{error}</p>
-            )}
+            <div className="text-right -mt-2">
+              <Link href="/forgot-password" className="text-sm text-text-secondary hover:text-primary transition-colors">
+                Passwort vergessen?
+              </Link>
+            </div>
 
-            <Button
-              type="submit"
-              variant="contained"
-              disabled={loading}
-              sx={{
-                padding: "10px",
-                fontWeight: "bold",
-                backgroundColor: "#1976d2",
-                "&:hover": {
-                  backgroundColor: "#145a96",
-                },
-              }}
-            >
-              {loading ? "Wird eingeloggt..." : "Log In"}
+            {error && <Alert variant="danger">{error}</Alert>}
+
+            <Button type="submit" disabled={loading} className="w-full mt-2">
+              {loading ? "Wird eingeloggt..." : "Einloggen"}
             </Button>
           </form>
-        </Paper>
-      </Box>
-    </Box>
+
+          <p className="text-sm text-text-muted mt-6 text-center">
+            Noch kein Konto?{" "}
+            <Link href="/regist" className="text-primary hover:text-primary-hover font-medium">
+              Jetzt registrieren
+            </Link>
+          </p>
+        </Card>
+      </div>
+    </div>
   );
 }

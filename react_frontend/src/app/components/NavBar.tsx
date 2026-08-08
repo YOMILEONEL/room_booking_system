@@ -1,61 +1,96 @@
 "use client";
-import * as React from 'react';
-import AppBar from '@mui/material/AppBar';
-import Box from '@mui/material/Box';
-import Toolbar from '@mui/material/Toolbar';
-import Typography from '@mui/material/Typography';
-import Button from '@mui/material/Button';
-import { useRouter } from 'next/navigation';
-import { useSession, signOut } from 'next-auth/react';
+import * as React from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useSession, signOut } from "next-auth/react";
+import { ConfirmDialog } from "./ui";
 
-
-export default function NavBar(){
-
+export default function NavBar() {
   const router = useRouter();
   const { data: session, status } = useSession();
-
-  const navigateToRegistration = () => {
-    router.push("/regist");
-  }
-
-  const navigateToLogin = () =>{
-    router.push("/login");
-  }
-
-  const navigateToStartSeite = () => {
-    router.push("/");
-  }
+  const [confirmLogout, setConfirmLogout] = React.useState(false);
 
   const handleLogout = () => {
     signOut({ callbackUrl: "/" });
-  }
+  };
 
+  return (
+    <header className="sticky top-0 z-50 bg-card/95 backdrop-blur border-b border-border-subtle">
+      <div className="max-w-6xl mx-auto flex items-center justify-between gap-4 px-4 sm:px-6 py-3.5">
+        <Link
+          href="/"
+          className="font-bold text-base sm:text-lg tracking-tight hover:text-primary transition-colors"
+        >
+          Raumbuchungssystem
+        </Link>
 
-  return(
-        <Box sx={{ flexGrow: 1 }}>
-      <AppBar position="static">
-        <Toolbar>
+        <nav className="flex items-center gap-2 sm:gap-3">
+          <Link
+            href="/"
+            className="hidden sm:inline-block px-3 py-2 rounded-lg text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-black/[0.04] transition-colors"
+          >
+            Startseite
+          </Link>
 
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            Willkommen zu unserem Raumbuchungssystem
-          </Typography>
-          <Button color="inherit" onClick={navigateToStartSeite}>StartSeite</Button>
           {status === "authenticated" ? (
             <>
-              <Typography variant="body1" sx={{ mx: 2, alignSelf: "center" }}>
+              <Link
+                href="/rooms"
+                className="px-3 py-2 rounded-lg text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-black/[0.04] transition-colors"
+              >
+                Räume
+              </Link>
+              <Link
+                href="/profile"
+                className="px-3 py-2 rounded-lg text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-black/[0.04] transition-colors"
+              >
+                Profil
+              </Link>
+              {session?.user?.role === "ADMIN" && (
+                <Link
+                  href="/admin"
+                  className="px-3 py-2 rounded-lg text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-black/[0.04] transition-colors"
+                >
+                  Verwaltung
+                </Link>
+              )}
+              <span className="hidden sm:inline text-sm text-text-muted px-1">
                 {session.user?.name}
-              </Typography>
-              <Button color="inherit" onClick={handleLogout}>Logout</Button>
+              </span>
+              <button
+                onClick={() => setConfirmLogout(true)}
+                className="px-3.5 py-2 rounded-lg text-sm font-semibold bg-black/[0.06] hover:bg-black/[0.1] transition-colors"
+              >
+                Logout
+              </button>
             </>
           ) : (
             <>
-              <Button color="inherit" onClick={navigateToRegistration}>Registration</Button>
-              <Button color="inherit" onClick={navigateToLogin}>Login</Button>
+              <button
+                onClick={() => router.push("/regist")}
+                className="px-3 py-2 rounded-lg text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-black/[0.04] transition-colors"
+              >
+                Registrieren
+              </button>
+              <button
+                onClick={() => router.push("/login")}
+                className="px-3.5 py-2 rounded-lg text-sm font-semibold bg-primary hover:bg-primary-hover text-white transition-colors"
+              >
+                Login
+              </button>
             </>
           )}
-        </Toolbar>
-      </AppBar>
-    </Box>
+        </nav>
+      </div>
 
-    )
+      <ConfirmDialog
+        open={confirmLogout}
+        title="Abmelden"
+        message="Möchtest du dich wirklich abmelden?"
+        confirmLabel="Abmelden"
+        onConfirm={handleLogout}
+        onCancel={() => setConfirmLogout(false)}
+      />
+    </header>
+  );
 }
