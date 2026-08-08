@@ -50,7 +50,7 @@ export default function Start() {
             Jetzt buchen
           </Button>
           {status !== "authenticated" && (
-            <Button variant="secondary" onClick={() => router.push("/regist")}>
+            <Button variant="secondary" onClick={() => router.push("/login?mode=register")}>
               Konto erstellen
             </Button>
           )}

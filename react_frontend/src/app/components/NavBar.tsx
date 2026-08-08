@@ -65,20 +65,12 @@ export default function NavBar() {
               </button>
             </>
           ) : (
-            <>
-              <button
-                onClick={() => router.push("/regist")}
-                className="px-3 py-2 rounded-lg text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-black/[0.04] transition-colors"
-              >
-                Registrieren
-              </button>
-              <button
-                onClick={() => router.push("/login")}
-                className="px-3.5 py-2 rounded-lg text-sm font-semibold bg-primary hover:bg-primary-hover text-white transition-colors"
-              >
-                Login
-              </button>
-            </>
+            <button
+              onClick={() => router.push("/login")}
+              className="px-3.5 py-2 rounded-lg text-sm font-semibold bg-primary hover:bg-primary-hover text-white transition-colors"
+            >
+              Login
+            </button>
           )}
         </nav>
       </div>
