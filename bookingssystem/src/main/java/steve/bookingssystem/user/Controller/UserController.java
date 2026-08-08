@@ -3,6 +3,7 @@ package steve.bookingssystem.user.Controller;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import steve.bookingssystem.security.AuthorizationService;
+import steve.bookingssystem.user.model.UpdateUserRequest;
 import steve.bookingssystem.user.model.User;
 import steve.bookingssystem.user.model.UserDTO;
 import steve.bookingssystem.user.service.UserService;
@@ -40,9 +41,9 @@ public class UserController {
     }
 
     @PutMapping("update/{id}")
-    public void updateUser(@PathVariable UUID id, @RequestBody User user) {
+    public void updateUser(@PathVariable UUID id, @RequestBody UpdateUserRequest request) {
         authorizationService.requireOwnerOrAdmin(id);
-        userService.updateUser(id, user);
+        userService.updateUser(id, request);
     }
 
 

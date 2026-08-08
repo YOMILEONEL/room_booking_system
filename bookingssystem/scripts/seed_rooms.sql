@@ -4,7 +4,7 @@
 -- Room names match react_frontend/src/app/lib/roomImages.ts exactly, so they render
 -- with the real uploaded photos instead of the default placeholder.
 
-insert into room (id, name, capacity, location, price_per_night, room_status) values
+insert into room (id, name, capacity, location, price_per_day, room_status) values
   (gen_random_uuid(), 'Konferenz-Raum',         12, 'Hauptgebäude, 2. OG', 45.00, 'VERFUGBAR'),
   (gen_random_uuid(), 'Meetingraum Beta',         6, 'Hauptgebäude, 1. OG', 25.00, 'VERFUGBAR'),
   (gen_random_uuid(), 'Vorlesungssaal Epsilon',  120, 'Gebäude C, EG',      150.00, 'VERFUGBAR'),

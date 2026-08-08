@@ -152,8 +152,8 @@ public class BookingServiceImpl implements BookingService {
         newBooking.setCreatedAt(Instant.now());
         bookingRepository.save(newBooking);
 
-        long nights = ChronoUnit.DAYS.between(startTime, endTime) + 1;
-        BigDecimal baseAmount = room.getPricePerNight().multiply(BigDecimal.valueOf(nights));
+        long days = ChronoUnit.DAYS.between(startTime, endTime) + 1;
+        BigDecimal baseAmount = room.getPricePerDay().multiply(BigDecimal.valueOf(days));
         boolean isOrganisation = user.getCustomerType() == CustomerType.ORGANISATION;
         BigDecimal amount = user.getCustomerType() != null ? user.getCustomerType().applyPricing(baseAmount) : baseAmount;
 

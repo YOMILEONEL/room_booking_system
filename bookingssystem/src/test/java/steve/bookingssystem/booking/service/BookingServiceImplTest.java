@@ -59,13 +59,13 @@ class BookingServiceImplTest {
     @InjectMocks
     private BookingServiceImpl bookingService;
 
-    private Room room(BigDecimal pricePerNight) {
+    private Room room(BigDecimal pricePerDay) {
         Room room = new Room();
         room.setId(ROOM_ID);
         room.setName("Konferenzraum");
         room.setCapacity(10);
         room.setLocation("EG");
-        room.setPricePerNight(pricePerNight);
+        room.setPricePerDay(pricePerDay);
         return room;
     }
 
@@ -88,7 +88,7 @@ class BookingServiceImplTest {
     }
 
     @Test
-    void addBooking_computesAmountFromPricePerNightAndNights() {
+    void addBooking_computesAmountFromPricePerDayAndDays() {
         when(roomRepository.findById(ROOM_ID)).thenReturn(Optional.of(room(new BigDecimal("100.00"))));
         when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user()));
         when(bookingRepository.findOverlapping(eq(ROOM_ID), any(), any(), eq(null))).thenReturn(List.of());
@@ -96,7 +96,7 @@ class BookingServiceImplTest {
         BookingResponseDTO result = bookingService.addBooking(
                 dto(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 3), null));
 
-        // 1st-3rd inclusive = 3 nights
+        // 1st-3rd inclusive = 3 days
         assertThat(result.getPayment().getAmount()).isEqualByComparingTo("300.00");
         assertThat(result.getPayment().getStatus()).isEqualTo(PaymentStatus.PENDING);
 

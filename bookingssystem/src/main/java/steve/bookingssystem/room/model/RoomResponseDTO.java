@@ -8,22 +8,28 @@ public record RoomResponseDTO(
         UUID id,
         String name,
         int capacity,
+        Double sizeSquareMeters,
         String location,
-        BigDecimal pricePerNight,
-        BigDecimal effectivePricePerNight,
+        String city,
+        String description,
+        BigDecimal pricePerDay,
+        BigDecimal effectivePricePerDay,
         Status roomStatus,
         String imageUrl,
         boolean active,
         LocalDate bookedUntil
 ) {
-    public static RoomResponseDTO from(Room room, LocalDate bookedUntil, BigDecimal effectivePricePerNight) {
+    public static RoomResponseDTO from(Room room, LocalDate bookedUntil, BigDecimal effectivePricePerDay) {
         return new RoomResponseDTO(
                 room.getId(),
                 room.getName(),
                 room.getCapacity(),
+                room.getSizeSquareMeters(),
                 room.getLocation(),
-                room.getPricePerNight(),
-                effectivePricePerNight,
+                room.getCity(),
+                room.getDescription(),
+                room.getPricePerDay(),
+                effectivePricePerDay,
                 room.getRoomStatus(),
                 room.getImageUrl(),
                 room.isActive(),

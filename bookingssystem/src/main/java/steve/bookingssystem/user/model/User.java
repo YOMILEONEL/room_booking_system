@@ -42,5 +42,19 @@ public class User {
         return new UserDTO(u.id, u.username, u.role, u.customerType, u.organisationName, u.firstName, u.lastName, u.phoneNumber);
     }
 
+    // Friendly name for the UI - organisation name, "Vorname Nachname", or the username as a
+    // fallback (admins have no customerType, and any incomplete profile falls back the same way).
+    public String getDisplayName() {
+        if (customerType == CustomerType.ORGANISATION && organisationName != null && !organisationName.isBlank()) {
+            return organisationName;
+        }
+        if (customerType == CustomerType.KUNDE
+                && firstName != null && !firstName.isBlank()
+                && lastName != null && !lastName.isBlank()) {
+            return firstName + " " + lastName;
+        }
+        return username;
+    }
+
 
 }

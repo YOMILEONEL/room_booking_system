@@ -74,7 +74,9 @@ class BookingConflictIntegrationTest {
                 "name", "Konferenzraum " + suffix,
                 "capacity", 8,
                 "location", "1. OG",
-                "pricePerNight", 100
+                "city", "Musterstadt",
+                "description", "Ein heller Konferenzraum fuer Tests.",
+                "pricePerDay", 100
         ));
         String roomResponse = mockMvc.perform(post("/room/save")
                         .header("Authorization", "Bearer " + admin.get("accessToken").asText())

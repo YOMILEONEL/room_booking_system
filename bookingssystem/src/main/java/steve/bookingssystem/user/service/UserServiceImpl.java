@@ -4,6 +4,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import steve.bookingssystem.exception.ResourceNotFoundException;
+import steve.bookingssystem.security.AuthorizationService;
+import steve.bookingssystem.user.model.UpdateUserRequest;
 import steve.bookingssystem.user.model.User;
 import steve.bookingssystem.user.model.UserDTO;
 import steve.bookingssystem.user.repository.UserRepository;
@@ -19,6 +21,8 @@ public class UserServiceImpl implements UserService {
     private UserRepository userRepository;
     @Autowired
     private PasswordEncoder passwordEncoder;
+    @Autowired
+    private AuthorizationService authorizationService;
 
     @Override
     public User addUser(User user) {
@@ -26,17 +30,26 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public void updateUser(UUID id, User newUser) {
+    public void updateUser(UUID id, UpdateUserRequest request) {
         User existingUser = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + id));
         // Partial update: only touch fields the caller actually sent, so a
         // username-only change can never blank out the stored password (and
         // vice versa). Password must be hashed the same way registration does.
-        if (newUser.getUsername() != null && !newUser.getUsername().isBlank()) {
-            existingUser.setUsername(newUser.getUsername());
+        if (request.username() != null && !request.username().isBlank()) {
+            existingUser.setUsername(request.username());
         }
-        if (newUser.getPassword() != null && !newUser.getPassword().isBlank()) {
-            existingUser.setPassword(passwordEncoder.encode(newUser.getPassword()));
+        if (request.password() != null && !request.password().isBlank()) {
+            // Only enforced when users change their own password - an admin editing
+            // someone else's account doesn't know that account's current password.
+            boolean isSelfService = id.equals(authorizationService.requireAuthenticatedUserId());
+            if (isSelfService) {
+                if (request.currentPassword() == null || request.currentPassword().isBlank()
+                        || !passwordEncoder.matches(request.currentPassword(), existingUser.getPassword())) {
+                    throw new IllegalArgumentException("Aktuelles Passwort ist falsch");
+                }
+            }
+            existingUser.setPassword(passwordEncoder.encode(request.password()));
         }
         userRepository.save(existingUser);
     }

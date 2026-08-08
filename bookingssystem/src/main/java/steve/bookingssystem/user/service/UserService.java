@@ -1,6 +1,7 @@
 package steve.bookingssystem.user.service;
 
 
+import steve.bookingssystem.user.model.UpdateUserRequest;
 import steve.bookingssystem.user.model.User;
 import steve.bookingssystem.user.model.UserDTO;
 
@@ -9,7 +10,7 @@ import java.util.UUID;
 
 public interface UserService  {
     User addUser(User user);
-    void updateUser(UUID id, User user);
+    void updateUser(UUID id, UpdateUserRequest request);
     void deleteUser(UUID id);
     User getUserById(UUID id);
     List<UserDTO> getAllUsers();

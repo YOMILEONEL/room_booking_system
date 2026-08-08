@@ -49,7 +49,7 @@ public class RoomServiceImpl implements RoomService {
                 .map(Booking::getEndTime)
                 .orElse(null);
 
-        BigDecimal effectivePrice = effectivePrice(room.getPricePerNight());
+        BigDecimal effectivePrice = effectivePrice(room.getPricePerDay());
 
         return RoomResponseDTO.from(room, bookedUntil, effectivePrice);
     }
@@ -72,13 +72,13 @@ public class RoomServiceImpl implements RoomService {
                 .map(room -> RoomResponseDTO.from(
                         room,
                         bookedUntilByRoom.get(room.getId()),
-                        customerType != null ? customerType.applyPricing(room.getPricePerNight()) : room.getPricePerNight()))
+                        customerType != null ? customerType.applyPricing(room.getPricePerDay()) : room.getPricePerDay()))
                 .toList();
     }
 
-    private BigDecimal effectivePrice(BigDecimal pricePerNight) {
+    private BigDecimal effectivePrice(BigDecimal pricePerDay) {
         CustomerType customerType = authorizationService.currentCustomerType();
-        return customerType != null ? customerType.applyPricing(pricePerNight) : pricePerNight;
+        return customerType != null ? customerType.applyPricing(pricePerDay) : pricePerDay;
     }
 
     @Override
@@ -89,8 +89,11 @@ public class RoomServiceImpl implements RoomService {
 
         roomExist.setName(roomDetails.getName());
         roomExist.setCapacity(roomDetails.getCapacity());
+        roomExist.setSizeSquareMeters(roomDetails.getSizeSquareMeters());
         roomExist.setLocation(roomDetails.getLocation());
-        roomExist.setPricePerNight(roomDetails.getPricePerNight());
+        roomExist.setCity(roomDetails.getCity());
+        roomExist.setDescription(roomDetails.getDescription());
+        roomExist.setPricePerDay(roomDetails.getPricePerDay());
         roomExist.setRoomStatus(roomDetails.getRoomStatus());
         return roomRepository.save(roomExist);
     }
