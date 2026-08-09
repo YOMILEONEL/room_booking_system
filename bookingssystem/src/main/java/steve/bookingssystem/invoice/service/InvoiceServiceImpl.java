@@ -37,7 +37,7 @@ public class InvoiceServiceImpl implements InvoiceService {
         Invoice invoice = new Invoice();
         invoice.setInvoiceNumber(invoiceNumber);
         invoice.setPayment(payment);
-        invoice.setCustomerUsernameSnapshot(payment.getBooking().getUser().getUsername());
+        invoice.setCustomerEmailSnapshot(payment.getBooking().getUser().getEmail());
         invoice.setRoomNameSnapshot(payment.getBooking().getRoom().getName());
         invoice.setAmount(payment.getAmount());
         invoice.setInvoiceDate(LocalDate.now());

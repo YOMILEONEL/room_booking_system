@@ -14,19 +14,19 @@ public class InvoiceResponseDTO {
     private String invoiceNumber;
     private UUID bookingId;
     private BigDecimal amount;
-    private String customerUsernameSnapshot;
+    private String customerEmailSnapshot;
     private String roomNameSnapshot;
     private LocalDate invoiceDate;
     private Instant createdAt;
 
     public InvoiceResponseDTO(UUID id, String invoiceNumber, UUID bookingId, BigDecimal amount,
-                               String customerUsernameSnapshot, String roomNameSnapshot,
+                               String customerEmailSnapshot, String roomNameSnapshot,
                                LocalDate invoiceDate, Instant createdAt) {
         this.id = id;
         this.invoiceNumber = invoiceNumber;
         this.bookingId = bookingId;
         this.amount = amount;
-        this.customerUsernameSnapshot = customerUsernameSnapshot;
+        this.customerEmailSnapshot = customerEmailSnapshot;
         this.roomNameSnapshot = roomNameSnapshot;
         this.invoiceDate = invoiceDate;
         this.createdAt = createdAt;
@@ -38,7 +38,7 @@ public class InvoiceResponseDTO {
                 invoice.getInvoiceNumber(),
                 invoice.getPayment().getBooking().getBookingId(),
                 invoice.getAmount(),
-                invoice.getCustomerUsernameSnapshot(),
+                invoice.getCustomerEmailSnapshot(),
                 invoice.getRoomNameSnapshot(),
                 invoice.getInvoiceDate(),
                 invoice.getCreatedAt()

@@ -32,6 +32,12 @@ services:
       SUPABASE_S3_ENDPOINT: https://fvfbnxgkzbynownyywtd.supabase.co/storage/v1/s3
       SUPABASE_S3_REGION: eu-west-1
       SUPABASE_S3_BUCKET: room-images
+      # TEMPORARY: no email sending is configured (see StorageService-style TODO), so this
+      # logs the raw password-reset token as a stand-in for actually mailing it - anyone with
+      # access to `docker logs booking-backend` can read it and take over the account it was
+      # requested for within the 30-minute validity window. Remove this once real email
+      # delivery exists (docs/code-review.md, 2.1). Defaults to "false" if unset.
+      APP_LOG_PASSWORD_RESET_TOKENS: "true"
     ports:
       - "8080:8080"
 

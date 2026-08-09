@@ -31,10 +31,10 @@ class AuthFlowIntegrationTest {
 
     @Test
     void registerLoginRefreshLogout_endToEnd() throws Exception {
-        String username = "auth-flow-" + UUID.randomUUID();
+        String email = "auth-flow-" + UUID.randomUUID() + "@test.example";
 
         String registerBody = objectMapper.writeValueAsString(Map.of(
-                "username", username,
+                "email", email,
                 "password", "password123",
                 "customerType", "KUNDE",
                 "firstName", "Auth",

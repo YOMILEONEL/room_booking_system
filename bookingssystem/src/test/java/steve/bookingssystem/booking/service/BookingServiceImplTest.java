@@ -72,7 +72,7 @@ class BookingServiceImplTest {
     private User user() {
         User user = new User();
         user.setId(USER_ID);
-        user.setUsername("alice");
+        user.setEmail("alice@test.example");
         user.setPassword("irrelevant-hash");
         return user;
     }

@@ -47,9 +47,9 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             return;
         }
 
-        String username;
+        String email;
         try {
-            username = jwtService.extractSubject(token);
+            email = jwtService.extractSubject(token);
         } catch (Exception ex) {
             filterChain.doFilter(request, response);
             return;
@@ -57,7 +57,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         UserDetails user;
         try {
-            user = userDetailsService.loadUserByUsername(username);
+            user = userDetailsService.loadUserByUsername(email);
         } catch (Exception ex) {
             filterChain.doFilter(request, response);
             return;

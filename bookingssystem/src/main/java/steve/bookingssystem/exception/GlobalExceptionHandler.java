@@ -1,5 +1,6 @@
 package steve.bookingssystem.exception;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -41,6 +42,14 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(IllegalStateException.class)
     public ResponseEntity<Map<String, String>> handleIllegalState(IllegalStateException ex) {
         return errorBody(HttpStatus.CONFLICT, ex.getMessage());
+    }
+
+    // Backstop for races the application-level checks can't fully close (e.g. two concurrent
+    // email changes/registrations landing on the same value) - the unique DB constraint always
+    // wins, this just keeps the resulting error a clean 409 instead of a raw 500.
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<Map<String, String>> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
+        return errorBody(HttpStatus.CONFLICT, "Diese Angabe wird bereits verwendet.");
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

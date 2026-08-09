@@ -44,7 +44,7 @@ public class InvoicePdfGenerator {
             document.add(section("Rechnungsdatum: " + invoice.getInvoiceDate().format(DATE_FORMAT), textFont));
 
             document.add(new Paragraph("Kunde", labelFont));
-            document.add(section(invoice.getCustomerUsernameSnapshot(), textFont));
+            document.add(section(invoice.getCustomerEmailSnapshot(), textFont));
 
             document.add(new Paragraph("Buchung", labelFont));
             document.add(new Paragraph("Raum: " + invoice.getRoomNameSnapshot(), textFont));

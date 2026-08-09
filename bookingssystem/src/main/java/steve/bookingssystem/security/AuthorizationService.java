@@ -24,7 +24,7 @@ public class AuthorizationService {
             throw new AccessDeniedException("Not authenticated");
         }
 
-        User user = userRepository.findByUsername(auth.getName());
+        User user = userRepository.findByEmail(auth.getName());
         if (user == null) {
             throw new AccessDeniedException("Not authenticated");
         }
@@ -56,7 +56,7 @@ public class AuthorizationService {
         if (auth == null || !auth.isAuthenticated()) {
             return null;
         }
-        User user = userRepository.findByUsername(auth.getName());
+        User user = userRepository.findByEmail(auth.getName());
         return user != null ? user.getCustomerType() : null;
     }
 

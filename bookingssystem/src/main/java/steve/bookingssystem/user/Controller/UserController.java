@@ -1,5 +1,6 @@
 package steve.bookingssystem.user.Controller;
 
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import steve.bookingssystem.security.AuthorizationService;
@@ -41,7 +42,7 @@ public class UserController {
     }
 
     @PutMapping("update/{id}")
-    public void updateUser(@PathVariable UUID id, @RequestBody UpdateUserRequest request) {
+    public void updateUser(@PathVariable UUID id, @Valid @RequestBody UpdateUserRequest request) {
         authorizationService.requireOwnerOrAdmin(id);
         userService.updateUser(id, request);
     }

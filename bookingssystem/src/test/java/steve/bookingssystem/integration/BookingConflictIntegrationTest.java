@@ -16,6 +16,7 @@ import steve.bookingssystem.user.repository.UserRepository;
 import java.util.Map;
 import java.util.UUID;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -32,9 +33,9 @@ class BookingConflictIntegrationTest {
     @Autowired
     private UserRepository userRepository;
 
-    private JsonNode register(String username) throws Exception {
+    private JsonNode register(String email) throws Exception {
         String body = objectMapper.writeValueAsString(Map.of(
-                "username", username,
+                "email", email,
                 "password", "password123",
                 "customerType", "KUNDE",
                 "firstName", "Test",
@@ -54,7 +55,7 @@ class BookingConflictIntegrationTest {
      * RegistrationLoginController.registerUser) - promoting to ADMIN only happens
      * out-of-band, simulated here via direct repository access instead of the API.
      * The already-issued access token still picks this up: JwtAuthFilter re-resolves
-     * authorities from the DB by username on every request, it doesn't bake the role
+     * authorities from the DB by email on every request, it doesn't bake the role
      * into the token itself.
      */
     private void promoteToAdmin(UUID userId) {
@@ -66,9 +67,9 @@ class BookingConflictIntegrationTest {
     @Test
     void secondOverlappingBooking_isRejectedWithConflict() throws Exception {
         String suffix = UUID.randomUUID().toString();
-        JsonNode admin = register("admin-" + suffix);
+        JsonNode admin = register("admin-" + suffix + "@test.example");
         promoteToAdmin(UUID.fromString(admin.get("id").asText()));
-        JsonNode member = register("member-" + suffix);
+        JsonNode member = register("member-" + suffix + "@test.example");
 
         String roomBody = objectMapper.writeValueAsString(Map.of(
                 "name", "Konferenzraum " + suffix,
@@ -113,5 +114,53 @@ class BookingConflictIntegrationTest {
                         .content(overlappingBooking))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error").isNotEmpty());
+    }
+
+    @Test
+    void bookingWithInvalidDiscountCode_leavesNoGhostBooking() throws Exception {
+        String suffix = UUID.randomUUID().toString();
+        JsonNode admin = register("admin-" + suffix + "@test.example");
+        promoteToAdmin(UUID.fromString(admin.get("id").asText()));
+        JsonNode member = register("member-" + suffix + "@test.example");
+
+        String roomBody = objectMapper.writeValueAsString(Map.of(
+                "name", "Konferenzraum " + suffix,
+                "capacity", 8,
+                "location", "1. OG",
+                "city", "Musterstadt",
+                "description", "Ein heller Konferenzraum fuer Tests.",
+                "pricePerDay", 100
+        ));
+        String roomResponse = mockMvc.perform(post("/room/save")
+                        .header("Authorization", "Bearer " + admin.get("accessToken").asText())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(roomBody))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        String roomId = objectMapper.readTree(roomResponse).get("id").asText();
+
+        String memberAuth = "Bearer " + member.get("accessToken").asText();
+        String memberId = member.get("id").asText();
+
+        // Unknown discount code makes createBookingFor throw *after* the booking/payment
+        // inserts - without @Transactional this used to leave a paymentless "ghost booking"
+        // that permanently blocked the room (see BookingServiceImpl.createBookingFor).
+        String bookingWithBadCode = objectMapper.writeValueAsString(Map.of(
+                "roomId", roomId,
+                "userId", memberId,
+                "startTime", "2026-04-01",
+                "endTime", "2026-04-03",
+                "discountCode", "DOES-NOT-EXIST"
+        ));
+        mockMvc.perform(post("/booking/add")
+                        .header("Authorization", memberAuth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(bookingWithBadCode))
+                .andExpect(status().isBadRequest());
+
+        mockMvc.perform(get("/booking/getAll/" + memberId)
+                        .header("Authorization", memberAuth))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isEmpty());
     }
 }

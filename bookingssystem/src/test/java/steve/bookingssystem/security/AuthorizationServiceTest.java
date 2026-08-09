@@ -43,13 +43,13 @@ class AuthorizationServiceTest {
         SecurityContextHolder.clearContext();
     }
 
-    private void authenticateAs(String username, String... roles) {
+    private void authenticateAs(String email, String... roles) {
         List<GrantedAuthority> authorities = List.of(roles).stream()
                 .map(SimpleGrantedAuthority::new)
                 .map(GrantedAuthority.class::cast)
                 .toList();
         SecurityContextHolder.getContext().setAuthentication(
-                new UsernamePasswordAuthenticationToken(username, null, authorities));
+                new UsernamePasswordAuthenticationToken(email, null, authorities));
     }
 
     @Test
@@ -57,8 +57,8 @@ class AuthorizationServiceTest {
         authenticateAs("alice", "ROLE_MEMBER");
         User alice = new User();
         alice.setId(ALICE_ID);
-        alice.setUsername("alice");
-        lenient().when(userRepository.findByUsername("alice")).thenReturn(alice);
+        alice.setEmail("alice");
+        lenient().when(userRepository.findByEmail("alice")).thenReturn(alice);
 
         assertThatCode(() -> authorizationService.requireOwnerOrAdmin(ALICE_ID)).doesNotThrowAnyException();
     }
@@ -75,8 +75,8 @@ class AuthorizationServiceTest {
         authenticateAs("alice", "ROLE_MEMBER");
         User alice = new User();
         alice.setId(ALICE_ID);
-        alice.setUsername("alice");
-        when(userRepository.findByUsername("alice")).thenReturn(alice);
+        alice.setEmail("alice");
+        when(userRepository.findByEmail("alice")).thenReturn(alice);
 
         assertThatThrownBy(() -> authorizationService.requireOwnerOrAdmin(OTHER_USER_ID))
                 .isInstanceOf(AccessDeniedException.class);

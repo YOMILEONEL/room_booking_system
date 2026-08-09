@@ -6,7 +6,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import steve.bookingssystem.booking.model.AdminBookingDTO;
-import steve.bookingssystem.booking.model.Booking;
 import steve.bookingssystem.booking.model.BookingDTO;
 import steve.bookingssystem.booking.model.BookingResponseDTO;
 import steve.bookingssystem.booking.service.BookingService;
@@ -36,11 +35,6 @@ public class BookingController {
     @GetMapping("/getAll/{userId}")
     public List<BookingResponseDTO> getBookings(@PathVariable UUID userId) {
         return bookingService.getBookings(userId);
-    }
-
-    @PutMapping("/update/{id}/{userId}")
-    public BookingResponseDTO updateBooking(@PathVariable UUID id, @RequestBody Booking booking, @PathVariable UUID userId) {
-        return bookingService.updateBooking(id, booking, userId);
     }
 
     @DeleteMapping("/delete/{id}/{userId}")

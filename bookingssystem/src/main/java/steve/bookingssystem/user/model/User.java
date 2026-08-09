@@ -1,6 +1,7 @@
 package steve.bookingssystem.user.model;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
@@ -21,7 +22,9 @@ public class User {
     private UUID id;
 
     @NotBlank
-    private String username;
+    @Email
+    @Column(unique = true)
+    private String email;
 
     @NotBlank
     @Size(min = 6)
@@ -39,10 +42,10 @@ public class User {
     private String phoneNumber;
 
     public static UserDTO getUserDTO(User u){
-        return new UserDTO(u.id, u.username, u.role, u.customerType, u.organisationName, u.firstName, u.lastName, u.phoneNumber);
+        return new UserDTO(u.id, u.email, u.role, u.customerType, u.organisationName, u.firstName, u.lastName, u.phoneNumber);
     }
 
-    // Friendly name for the UI - organisation name, "Vorname Nachname", or the username as a
+    // Friendly name for the UI - organisation name, "Vorname Nachname", or the email as a
     // fallback (admins have no customerType, and any incomplete profile falls back the same way).
     public String getDisplayName() {
         if (customerType == CustomerType.ORGANISATION && organisationName != null && !organisationName.isBlank()) {
@@ -53,7 +56,7 @@ public class User {
                 && lastName != null && !lastName.isBlank()) {
             return firstName + " " + lastName;
         }
-        return username;
+        return email;
     }
 
 

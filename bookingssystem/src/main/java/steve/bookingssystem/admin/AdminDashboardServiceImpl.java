@@ -60,7 +60,7 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
                 .toList();
 
         List<CustomerBookingCountDto> topCustomers = allBookings.stream()
-                .collect(Collectors.groupingBy(b -> b.getUser().getUsername(), Collectors.counting()))
+                .collect(Collectors.groupingBy(b -> b.getUser().getEmail(), Collectors.counting()))
                 .entrySet().stream()
                 .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
                 .limit(5)

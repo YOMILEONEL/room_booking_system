@@ -2,6 +2,7 @@ package steve.bookingssystem.payment.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import steve.bookingssystem.exception.ResourceNotFoundException;
 import steve.bookingssystem.invoice.service.InvoiceService;
 import steve.bookingssystem.payment.model.Payment;
@@ -31,7 +32,11 @@ public class PaymentServiceImpl implements PaymentService {
         return PaymentResponseDTO.from(payment);
     }
 
+    // @Transactional so a failure while generating the invoice (e.g. an invoice-number collision,
+    // see InvoiceServiceImpl) rolls the PAID status back too, instead of leaving a payment marked
+    // PAID that never gets an invoice.
     @Override
+    @Transactional
     public PaymentResponseDTO confirmPayment(UUID paymentId) {
         authorizationService.requireAdmin();
         Payment payment = paymentRepository.findById(paymentId)

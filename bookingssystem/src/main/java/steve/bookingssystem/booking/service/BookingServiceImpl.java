@@ -3,6 +3,7 @@ package steve.bookingssystem.booking.service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import steve.bookingssystem.booking.model.AdminBookingDTO;
 import steve.bookingssystem.booking.model.Booking;
 import steve.bookingssystem.booking.model.BookingDTO;
@@ -46,22 +47,7 @@ public class BookingServiceImpl implements BookingService {
     AuthorizationService authorizationService;
 
     @Override
-    public BookingResponseDTO updateBooking(UUID id, Booking newBooking, UUID userId) {
-        Booking booking = bookingRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Booking not found: " + id));
-        authorizationService.requireOwnerOrAdmin(booking.getUser().getId());
-
-        UUID roomId = newBooking.getRoom() != null ? newBooking.getRoom().getId() : booking.getRoom().getId();
-        assertNoOverlap(roomId, newBooking.getStartTime(), newBooking.getEndTime(), id);
-
-        booking.setRoom(newBooking.getRoom());
-        booking.setStartTime(newBooking.getStartTime());
-        booking.setEndTime(newBooking.getEndTime());
-        bookingRepository.save(booking);
-        return BookingResponseDTO.from(booking);
-    }
-
-    @Override
+    @Transactional
     public void deleteBooking(UUID id, UUID userId) {
         Booking booking = bookingRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Booking not found: " + id));
@@ -99,6 +85,7 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Override
+    @Transactional
     public BookingResponseDTO addBooking(BookingDTO booking) {
         // Admins manage the system, they don't personally consume it - self-booking (for
         // themselves or anyone else via this endpoint) is off-limits. The only sanctioned path
@@ -120,10 +107,11 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Override
+    @Transactional
     public BookingResponseDTO addBookingForCustomer(AdminBookingDTO booking) {
         authorizationService.requireAdmin();
 
-        User customer = userRepository.findByUsername(booking.getCustomerEmail());
+        User customer = userRepository.findByEmail(booking.getCustomerEmail());
         if (customer == null) {
             throw new ResourceNotFoundException("Kunde nicht gefunden: " + booking.getCustomerEmail());
         }
@@ -134,6 +122,10 @@ public class BookingServiceImpl implements BookingService {
         return createBookingFor(customer, booking.getRoomId(), booking.getStartTime(), booking.getEndTime(), booking.getDiscountCode());
     }
 
+    // Called only from @Transactional public methods (addBooking, addBookingForCustomer) - the
+    // booking/payment inserts below and the discount-code check that can fail after them share
+    // that transaction, so an invalid discount code rolls back the booking too instead of leaving
+    // a paymentless "ghost booking" that blocks the room.
     private BookingResponseDTO createBookingFor(User user, UUID roomId, LocalDate startTime, LocalDate endTime, String discountCode) {
         if (startTime == null || endTime == null || startTime.isAfter(endTime)) {
             throw new IllegalArgumentException("Enddatum darf nicht vor Startdatum liegen");

@@ -26,7 +26,7 @@ public class Invoice {
     private Payment payment;
 
     @Column(nullable = false)
-    private String customerUsernameSnapshot;
+    private String customerEmailSnapshot;
 
     @Column(nullable = false)
     private String roomNameSnapshot;

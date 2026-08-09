@@ -1,4 +1,4 @@
 package steve.bookingssystem.user.model;
 
-public record ForgotPasswordRequest(String username) {
+public record ForgotPasswordRequest(String email) {
 }

@@ -33,7 +33,7 @@ class PasswordResetTokenServiceImplTest {
     private PasswordResetToken token(boolean used, Instant expiresAt) {
         User user = new User();
         user.setId(UUID.randomUUID());
-        user.setUsername("alice");
+        user.setEmail("alice");
 
         PasswordResetToken token = new PasswordResetToken();
         token.setToken("abc");
@@ -76,7 +76,7 @@ class PasswordResetTokenServiceImplTest {
 
         User result = passwordResetTokenService.consume("abc");
 
-        assertThat(result.getUsername()).isEqualTo("alice");
+        assertThat(result.getEmail()).isEqualTo("alice");
         assertThat(existing.isUsed()).isTrue();
         verify(passwordResetTokenRepository).save(existing);
     }

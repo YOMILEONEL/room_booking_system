@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -34,7 +35,7 @@ public class RegistrationLoginController {
 
     private static final Logger log = LoggerFactory.getLogger(RegistrationLoginController.class);
     private static final String GENERIC_FORGOT_PASSWORD_MESSAGE =
-            "Falls dieser Benutzername existiert, wurde ein Link zum Zuruecksetzen des Passworts erzeugt.";
+            "Falls diese E-Mail-Adresse existiert, wurde ein Link zum Zuruecksetzen des Passworts erzeugt.";
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -44,10 +45,13 @@ public class RegistrationLoginController {
     private final RefreshTokenService refreshTokenService;
     private final PasswordResetTokenService passwordResetTokenService;
 
+    @Value("${app.password-reset.log-token:false}")
+    private boolean logResetToken;
+
     @PostMapping("/register")
     public ResponseEntity<?> registerUser(@Valid @RequestBody RegisterRequest request) {
-        if (userRepository.findByUsername(request.username()) != null) {
-            throw new IllegalArgumentException("Username already exists");
+        if (userRepository.findByEmail(request.email()) != null) {
+            throw new IllegalArgumentException("Diese E-Mail-Adresse wird bereits verwendet.");
         }
 
         if (request.customerType() == CustomerType.ORGANISATION) {
@@ -62,7 +66,7 @@ public class RegistrationLoginController {
         }
 
         User user = new User();
-        user.setUsername(request.username());
+        user.setEmail(request.email());
         user.setPassword(passwordEncoder.encode(request.password()));
         // Role is never taken from client input - self-registration always creates a MEMBER.
         // Promoting to ADMIN has to happen out-of-band (direct DB access); there is no
@@ -79,31 +83,31 @@ public class RegistrationLoginController {
 
         User savedUser = userRepository.save(user);
 
-        String accessToken = jwtService.generateAccessToken(userDetailsService.loadUserByUsername(savedUser.getUsername()));
+        String accessToken = jwtService.generateAccessToken(userDetailsService.loadUserByUsername(savedUser.getEmail()));
         RefreshToken refreshToken = refreshTokenService.create(savedUser);
-        AuthResponse response = new AuthResponse(savedUser.getId(), savedUser.getUsername(), savedUser.getDisplayName(), savedUser.getRole(), savedUser.getCustomerType(), accessToken, refreshToken.getToken());
+        AuthResponse response = new AuthResponse(savedUser.getId(), savedUser.getEmail(), savedUser.getDisplayName(), savedUser.getRole(), savedUser.getCustomerType(), accessToken, refreshToken.getToken());
         return ResponseEntity.ok(response);
     }
 
     @PostMapping("/login")
     public ResponseEntity<?> loginUser(@RequestBody User user) {
         try{
-            authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(user.getUsername(), user.getPassword()));
-            User user1 = userRepository.findByUsername(user.getUsername());
-            String accessToken = jwtService.generateAccessToken(userDetailsService.loadUserByUsername(user1.getUsername()));
+            authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(user.getEmail(), user.getPassword()));
+            User user1 = userRepository.findByEmail(user.getEmail());
+            String accessToken = jwtService.generateAccessToken(userDetailsService.loadUserByUsername(user1.getEmail()));
             RefreshToken refreshToken = refreshTokenService.create(user1);
-            AuthResponse response = new AuthResponse(user1.getId(), user1.getUsername(), user1.getDisplayName(), user1.getRole(), user1.getCustomerType(), accessToken, refreshToken.getToken());
+            AuthResponse response = new AuthResponse(user1.getId(), user1.getEmail(), user1.getDisplayName(), user1.getRole(), user1.getCustomerType(), accessToken, refreshToken.getToken());
             return new ResponseEntity<Object>(response, HttpStatus.OK);
         }
         catch(Exception e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid username or password");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("E-Mail-Adresse oder Passwort falsch");
         }
     }
 
     @PostMapping("/refresh")
     public AccessTokenResponse refresh(@RequestBody RefreshRequest request) {
         RefreshToken refreshToken = refreshTokenService.validate(request.refreshToken());
-        String accessToken = jwtService.generateAccessToken(userDetailsService.loadUserByUsername(refreshToken.getUser().getUsername()));
+        String accessToken = jwtService.generateAccessToken(userDetailsService.loadUserByUsername(refreshToken.getUser().getEmail()));
         return new AccessTokenResponse(accessToken);
     }
 
@@ -114,14 +118,20 @@ public class RegistrationLoginController {
 
     @PostMapping("/forgot-password")
     public ResponseEntity<String> forgotPassword(@RequestBody ForgotPasswordRequest request) {
-        User user = userRepository.findByUsername(request.username());
+        User user = userRepository.findByEmail(request.email());
         if (user != null) {
             PasswordResetToken token = passwordResetTokenService.create(user);
-            // No mail sender configured in this project (no SMTP/Resend credentials) -
-            // logging here stands in for actually emailing the reset link.
-            log.info("Password reset token for user '{}': {}", user.getUsername(), token.getToken());
+            // Logging the raw token is a stand-in for actually emailing the reset link (no
+            // SMTP/Resend configured) - anyone with log access could otherwise take over the
+            // account within the token's validity window, so this is opt-in and off by default
+            // (see app.password-reset.log-token / docs/code-review.md, 2.1).
+            if (logResetToken) {
+                log.info("Password reset token for user '{}': {}", user.getEmail(), token.getToken());
+            } else {
+                log.info("Password reset token generated for user '{}'", user.getEmail());
+            }
         }
-        // Same response regardless of whether the username exists - anti-enumeration.
+        // Same response regardless of whether the email exists - anti-enumeration.
         return ResponseEntity.ok(GENERIC_FORGOT_PASSWORD_MESSAGE);
     }
 

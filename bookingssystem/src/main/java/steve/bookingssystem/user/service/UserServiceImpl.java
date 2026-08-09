@@ -33,11 +33,21 @@ public class UserServiceImpl implements UserService {
     public void updateUser(UUID id, UpdateUserRequest request) {
         User existingUser = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + id));
-        // Partial update: only touch fields the caller actually sent, so a
-        // username-only change can never blank out the stored password (and
+        // Partial update: only touch fields the caller actually sent, so an
+        // email-only change can never blank out the stored password (and
         // vice versa). Password must be hashed the same way registration does.
-        if (request.username() != null && !request.username().isBlank()) {
-            existingUser.setUsername(request.username());
+        if (request.email() != null && !request.email().isBlank()
+                && !request.email().equals(existingUser.getEmail())) {
+            // Without this check, any member could rename themselves to an admin's email:
+            // findByEmail then returns two rows for that admin, breaking their login/auth
+            // on every request (see docs/code-review.md, 1.9). The unique DB constraint on
+            // User.email is the hard backstop; this just turns the collision into a clean
+            // error instead of a raw constraint violation.
+            User collision = userRepository.findByEmail(request.email());
+            if (collision != null && !collision.getId().equals(id)) {
+                throw new IllegalArgumentException("Diese E-Mail-Adresse wird bereits verwendet.");
+            }
+            existingUser.setEmail(request.email());
         }
         if (request.password() != null && !request.password().isBlank()) {
             // Only enforced when users change their own password - an admin editing
