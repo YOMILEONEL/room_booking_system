@@ -11,38 +11,40 @@ Schweregrade: **HOCH** (kann Daten/Geld/Zugriff falsch machen oder die App lahml
 
 ## 1. Backend — Korrektheit
 
-### 1.1 `updateBooking` setzt den Raum auf `null`, wenn keiner mitgeschickt wird — HOCH
-`booking/service/BookingServiceImpl.java:49-62`
+### 1.1–1.3 `updateBooking` — behoben (entfernt)
+`PUT /booking/update/{id}/{userId}` war im Frontend komplett ungenutzt (kein Client-Aufruf, keine
+UI zum Bearbeiten einer bestehenden Buchung), aber erreichbar und trug drei gekoppelte Bugs:
+Raum konnte auf `null` gesetzt werden, der Preis wurde nie neu berechnet, und es fehlten
+Datums-/Bezahlt-Laufend-Sperren. Da es keinen Produktbedarf für "Buchung nachträglich verschieben"
+gibt, wurde die Methode entfernt statt repariert (`BookingController`, `BookingService`,
+`BookingServiceImpl`) — damit entfällt die Angriffsfläche vollständig, ohne eine ungenutzte
+Funktion mit drei Korrektheitsbugs am Leben zu halten. Sollte "Buchung verschieben" später als
+echtes Feature gebraucht werden, muss die Preisneuberechnung und die Sperr-Logik aus
+`createBookingFor`/`deleteBooking` konsequent mitgebaut werden.
 
-Der Fallback-Raum wird nur für die Überlappungsprüfung berechnet, aber `booking.setRoom(newBooking.getRoom())`
-wird immer ausgeführt. Ein `PUT /booking/update/{id}/{userId}` ohne `room`-Feld im Body setzt
-`room = null` → Verstoß gegen `nullable=false` → unbehandelte 500. Betroffen: nur der (im Frontend
-ungenutzte) Update-Endpunkt, aber die Methode ist erreichbar.
+### 1.4 Buchung + Zahlung werden ohne Transaktion geschrieben — behoben
+`booking/service/BookingServiceImpl.java`. `addBooking` und `addBookingForCustomer` (und damit die
+gemeinsam genutzte `createBookingFor`) sowie `deleteBooking` sind jetzt `@Transactional`. Schlägt
+die Rabattcode-Prüfung fehl (ungültiger Code), rollt die gesamte Buchung inklusive Zahlung zurück
+statt als "Geister-Buchung" ohne Zahlung stehen zu bleiben. Regressionstest:
+`integration/BookingConflictIntegrationTest.bookingWithInvalidDiscountCode_leavesNoGhostBooking`
+(gegen die Version ohne `@Transactional` verifiziert — schlägt dort fehl, ist jetzt grün).
 
-### 1.2 `updateBooking` berechnet den Preis nie neu — HOCH
-Gleiche Methode. Ändert man Datum/Raum einer Buchung, bleibt `payment.amount` unverändert. Eine
-15€-Buchung lässt sich so auf den 200€-Raum für 30 Nächte "umbuchen", ohne dass sich der Preis
-ändert.
+### 1.5 Race Condition bei der Überlappungsprüfung — MITTEL (gemindert, nicht vollständig behoben)
+`booking/service/BookingServiceImpl.java`. Überlappungsprüfung und Buchungs-Insert laufen jetzt in
+derselben Transaktion, aber ohne Locking (`SELECT ... FOR UPDATE`) oder einen DB-seitigen
+Exclusion-Constraint schützt Postgres' Standard-Isolationsstufe (`READ COMMITTED`) nicht davor,
+dass zwei parallele Transaktionen beide die Überlappungsprüfung bestehen, bevor eine von beiden
+committet. Für eine vollständige Lösung wäre ein `EXCLUDE`-Constraint auf `(room_id, daterange)`
+oder pessimistisches Locking auf dem Raum nötig — bewusst nicht Teil dieser Änderung.
 
-### 1.3 `updateBooking` hat keine Datumsprüfung und keine Bezahlt/Laufend-Sperre — HOCH
-Im Gegensatz zu `createBookingFor`/`deleteBooking` validiert diese Methode weder `start &lt;= end`
-noch verhindert sie das Verschieben einer bereits bezahlten oder laufenden Buchung.
-
-### 1.4 Buchung + Zahlung werden ohne Transaktion geschrieben — HOCH
-`booking/service/BookingServiceImpl.java:147-174`. Im ganzen Projekt gibt es **kein einziges**
-`@Transactional`. Die Buchung wird gespeichert, *bevor* der Rabattcode geprüft wird — schlägt die
-Prüfung fehl (ungültiger Code), bleibt eine Buchung ganz ohne Zahlung in der DB stehen und blockiert
-den Raum dauerhaft ("Geister-Buchung").
-
-### 1.5 Race Condition bei der Überlappungsprüfung — HOCH
-`booking/service/BookingServiceImpl.java:180-185`. Kein DB-Constraint, keine Transaktion. Zwei
-gleichzeitige Buchungsanfragen für denselben Raum/Zeitraum können beide durchkommen → Doppelbuchung.
-
-### 1.6 Rechnungsnummern-Vergabe ist COUNT-basiert und kollisionsanfällig — HOCH
-`invoice/service/InvoiceServiceImpl.java:33-35`: `countByInvoiceNumberStartingWith(prefix) + 1`.
-Zwei gleichzeitige Zahlungsbestätigungen können dieselbe Nummer berechnen → Unique-Constraint-
-Verletzung → 500, obwohl die Zahlung schon als `PAID` gespeichert wurde. Diese Buchung bekommt nie
-eine Rechnung (erneutes Bestätigen wirft `"Payment is already marked as paid"`).
+### 1.6 Rechnungsnummern-Vergabe ist COUNT-basiert und kollisionsanfällig — MITTEL (gemindert, nicht vollständig behoben)
+`invoice/service/InvoiceServiceImpl.java:33-35`: `countByInvoiceNumberStartingWith(prefix) + 1`
+bleibt kollisionsanfällig. Aber `PaymentServiceImpl.confirmPayment` ist jetzt `@Transactional`:
+schlägt die Rechnungserzeugung an einer Nummernkollision fehl, rollt der `PAID`-Status mit zurück —
+die Zahlung bleibt `PENDING` und lässt sich erneut bestätigen, statt dauerhaft "bezahlt, aber ohne
+Rechnung" hängen zu bleiben. Die eigentliche Kollisionsquelle (COUNT statt DB-Sequence) besteht
+weiter.
 
 ### 1.7 `Collectors.toMap` wirft bei zwei überlappenden Buchungen für denselben Raum — MITTEL/HOCH
 `room/service/RoomServiceImpl.java:64-67`. Sobald (z. B. durch 1.5) zwei Buchungen für denselben
@@ -54,13 +56,26 @@ internen Java-Fehlermeldung statt der Raumliste. Die ganze Raumübersicht ist da
 haben beide Lombok `@Data`. `toString()`/`equals()`/`hashCode()` können sich gegenseitig endlos
 aufrufen → `StackOverflowError` bei jedem Debug-Log oder jeder `Set`-Nutzung.
 
-### 1.9 Doppelte Benutzernamen möglich → Admin-Account kann lahmgelegt werden — HOCH
-`user/model/User.java:24`: `username` hat kein `unique = true`, keine DB-Unique-Constraint.
-`UserServiceImpl.updateUser` prüft beim Ändern des eigenen Benutzernamens nicht auf Kollision.
-Jedes Mitglied kann sich per `PUT /user/update/{eigeneId}` den Benutzernamen eines Admins
-zulegen → `findByUsername` liefert dann zwei Treffer → `IncorrectResultSizeDataAccessException`
-→ **jede Anfrage des echten Admins schlägt fehl** (Login, Auth-Check, alles). Faktisch ein
-Denial-of-Service gegen ein fremdes Konto, auslösbar von jedem Mitglied.
+### 1.9 Doppelte E-Mail-Adressen möglich → Admin-Account kann lahmgelegt werden — behoben
+`User.email` (umbenannt von `username`, siehe Session-Historie) hat jetzt `@Column(unique = true)`
+als harten DB-Constraint. `UserServiceImpl.updateUser` prüft zusätzlich auf Anwendungsebene auf
+Kollision (schöne 400-Fehlermeldung statt roher Constraint-Verletzung), und
+`GlobalExceptionHandler` fängt `DataIntegrityViolationException` als Backstop für den
+verbleibenden Race (zwei parallele Requests) mit einem sauberen 409 ab. Regressionstests:
+`UserServiceImplTest` (Anwendungsebene, inkl. false-positive-Check bei unveränderter/eigener
+E-Mail) und `integration/EmailCollisionIntegrationTest` (End-to-End über die API) — beide gegen
+die Version ohne Fix verifiziert.
+
+**Achtung vor dem Deploy:** `ddl-auto=update` erzeugt daraus `ALTER TABLE users ADD CONSTRAINT
+... UNIQUE (email)`. Falls in der Produktions-DB bereits doppelte E-Mail-Adressen existieren
+(z. B. genau durch diesen Bug entstanden), schlägt dieses ALTER TABLE fehl und rollt komplett
+zurück (gleiche Fehlerklasse wie beim `city`/`description`-Rollout weiter oben in der
+Session-Historie) — vorher in Supabase prüfen:
+```sql
+SELECT email, COUNT(*) FROM users GROUP BY email HAVING COUNT(*) > 1;
+```
+Gibt es Treffer, müssen die doppelten Zeilen erst manuell bereinigt werden, bevor der Backend-
+Container mit dieser Änderung neu gestartet wird.
 
 ### 1.10 "Nächte"-Berechnung ist eigentlich eine inklusive Tageszählung — MITTEL
 `booking/service/BookingServiceImpl.java:155`: `DAYS.between(start, end) + 1`. Eine Buchung
@@ -81,12 +96,23 @@ Rundungsabweichungen zwischen angezeigtem und gespeichertem Betrag.
 
 ## 2. Backend — Sicherheit
 
-### 2.1 Passwort-Reset-Token landet im Log — HOCH
-`user/Controller/RegistrationLoginController.java:122`: `log.info(... token.getToken())`. Jeder
-mit Zugriff auf die Logs (Docker-Logs, Hosting-Dashboard, Screenshot) kann damit **jeden Account**
-innerhalb der 30-Minuten-Gültigkeit übernehmen. `/api/forgot-password` ist unauthentifiziert und
-ungedrosselt — ein Angreifer kann sich für jeden Benutzernamen jederzeit einen frischen Token
-erzeugen lassen.
+### 2.1 Passwort-Reset-Token landet im Log — teilweise behoben
+Das Loggen des rohen Tokens ist jetzt standardmäßig aus (`app.password-reset.log-token`,
+Default `false`) — ohne die Property loggt `RegistrationLoginController.forgotPassword` nur noch,
+*dass* ein Token erzeugt wurde, nicht mehr seinen Wert. Regressionstest:
+`RegistrationLoginControllerResetTokenLoggingTest` (prüft beide Zustände der Property direkt
+gegen den Log-Output).
+
+**Nicht behoben, weil es kein triviales Ein/Aus ist:** Dieses Projekt hat keinen Mailversand
+(kein SMTP/Resend), das Logging war der einzige Weg, den Token überhaupt aus dem System zu
+bekommen. Da `docker-compose.yml` aktuell die einzige Deployment-Variante ist (kein separates
+"nur lokal"-Setup), ist die Property dort bewusst auf `"true"` gesetzt, mit einem Kommentar,
+der erklärt, dass das ein Provisorium ist und bei echtem Mailversand entfernt werden muss.
+Solange das so bleibt, gilt die zweite Hälfte des ursprünglichen Befunds unverändert: Jeder mit
+Zugriff auf `docker logs booking-backend` kann weiterhin **jeden Account** innerhalb der
+30-Minuten-Gültigkeit übernehmen, und `/api/forgot-password` bleibt unauthentifiziert und
+ungedrosselt (separat als 2.7 "Keine Rate-Limits/Lockouts" erfasst). Vollständig gelöst ist das
+erst mit echtem E-Mail-Versand.
 
 ### 2.2 Passwort-Reset widerruft keine bestehenden Sessions — HOCH
 Nach einem Reset bleibt ein bereits ausgestelltes Refresh-Token bis zu **30 Tage** gültig. Ein
@@ -187,9 +213,9 @@ Payment-Service, AuthorizationService, Refresh-/Reset-Token-Services, zwei Integ
 
 ## 6. Frontend — Korrektheit
 
-### 6.1 Benutzername ändern zerschießt die eigene Session — HOCH
-`profile/page.tsx:61`. Nach dem Ändern des Benutzernamens wird die NextAuth-JWT nicht aktualisiert.
-Das Access-Token trägt weiter den alten Benutzernamen als `sub` — jede folgende Backend-Anfrage
+### 6.1 E-Mail-Adresse ändern zerschießt die eigene Session — HOCH
+`profile/page.tsx`. Nach dem Ändern der E-Mail-Adresse wird die NextAuth-JWT nicht aktualisiert.
+Das Access-Token trägt weiter die alte E-Mail-Adresse als `sub` — jede folgende Backend-Anfrage
 scheitert mit 403, bis das Token nach ~60 Minuten automatisch erneuert wird. Für den Nutzer wirkt
 die App bis dahin zufällig kaputt.
 
@@ -250,12 +276,12 @@ der Nutzer sieht gar nichts und weiß nicht, ob das Konto angelegt wurde.
 
 ## 8. Priorisierte Empfehlung (falls als Nächstes angegangen werden soll)
 
-1. **`updateBooking` reparieren oder entfernen** (1.1–1.3) — aktuell drei zusammenhängende Bugs in einer ungenutzten, aber erreichbaren Methode.
-2. **Transaktionen einführen** (`@Transactional` auf den schreibenden Service-Methoden) — behebt 1.4 und mindert 1.5/1.6.
-3. **Eindeutigkeit von `username`** auf DB-Ebene erzwingen (1.9) — einfache, hochwirksame Änderung.
-4. **Passwort-Reset-Token nicht loggen** (2.1) — trivial zu fixen, hohes Risiko.
-5. **Session nach Benutzernamen-Änderung aktualisieren** (6.1) — betrifft jeden Nutzer, der sein Profil bearbeitet.
+1. ~~**`updateBooking` reparieren oder entfernen** (1.1–1.3)~~ — erledigt, Methode entfernt.
+2. ~~**Transaktionen einführen** (`@Transactional` auf den schreibenden Service-Methoden)~~ — erledigt, behebt 1.4, mindert 1.5/1.6.
+3. ~~**Eindeutigkeit von `email`** auf DB-Ebene erzwingen (1.9)~~ — erledigt, siehe Deploy-Hinweis oben (Duplikate vorher prüfen).
+4. ~~**Passwort-Reset-Token nicht loggen** (2.1)~~ — teilweise erledigt (Default jetzt sicher), volle Lösung braucht echten Mailversand, siehe Hinweis oben.
+5. **Session nach E-Mail-Änderung aktualisieren** (6.1) — betrifft jeden Nutzer, der sein Profil bearbeitet.
 6. **Zeitzonen-sichere Datumsvergleiche im Frontend** (6.2) statt `new Date(isoString)`.
 7. Rest nach Zeit/Interesse — die Tabellen oben sind vollständig genug, um einzeln priorisiert zu werden.
 
-Kein Punkt in diesem Dokument wurde automatisch behoben — dies ist ausschließlich der Befund.
+Bis auf die oben abgehakten Punkte wurde kein weiterer Punkt in diesem Dokument automatisch behoben.

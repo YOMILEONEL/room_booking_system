@@ -55,18 +55,18 @@ umgesetzte, verpflichtende Anforderung.
 
 ### 4.1 Registrierung & Authentifizierung
 
-- **FA-AUTH.1** Das System muss die Registrierung mit Benutzername, Passwort (≥ 6 Zeichen) und
+- **FA-AUTH.1** Das System muss die Registrierung mit E-Mail-Adresse, Passwort (≥ 6 Zeichen) und
   Telefonnummer ermöglichen.
 - **FA-AUTH.2** Bei der Registrierung muss ein Kundentyp gewählt werden: *Kunde* (erfordert
   Vor- und Nachname) oder *Organisation* (erfordert Organisationsname).
 - **FA-AUTH.3** Jedes neu registrierte Konto muss automatisch die Rolle *Kunde* (MEMBER)
   erhalten; es darf keinen Weg über die API geben, sich selbst als Administrator zu registrieren.
-- **FA-AUTH.4** Das System muss Login per Benutzername/Passwort anbieten und bei Erfolg ein
+- **FA-AUTH.4** Das System muss Login per E-Mail-Adresse/Passwort anbieten und bei Erfolg ein
   Access-Token (kurzlebig) und ein Refresh-Token (langlebig) ausstellen.
 - **FA-AUTH.5** Abgelaufene Access-Token müssen ohne erneute Passworteingabe über das
   Refresh-Token erneuert werden können.
 - **FA-AUTH.6** Das System muss eine "Passwort vergessen"-Funktion anbieten, die unabhängig davon,
-  ob der angegebene Benutzername existiert, dieselbe Rückmeldung liefert (keine Preisgabe, ob ein
+  ob die angegebene E-Mail-Adresse existiert, dieselbe Rückmeldung liefert (keine Preisgabe, ob ein
   Konto existiert).
 - **FA-AUTH.7** Ein Passwort-Reset-Token muss zeitlich begrenzt und nach einmaliger Nutzung
   ungültig sein.
@@ -100,7 +100,7 @@ umgesetzte, verpflichtende Anforderung.
 - **FA-BOOK.2** Das System muss verhindern, dass ein Raum für sich überschneidende Zeiträume
   doppelt gebucht wird.
 - **FA-BOOK.3** Ein Administrator muss im Namen eines bestehenden Kunden buchen können, indem er
-  dessen E-Mail-Adresse/Benutzernamen angibt; das Zielkonto muss ein Kundenkonto (keine
+  dessen E-Mail-Adresse angibt; das Zielkonto muss ein Kundenkonto (keine
   Administrator-Rolle) sein.
 - **FA-BOOK.4** Ein Administrator darf keinen Raum für sich selbst über den regulären
   Buchungsweg buchen können.

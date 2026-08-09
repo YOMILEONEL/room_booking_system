@@ -48,12 +48,12 @@ den Kunden-Buchungs-Endpunkt mit einer Kunden-E-Mail.
 
 | Entität | Wichtigste Felder | Beziehungen |
 |---|---|---|
-| `User` | username, password (BCrypt), role, customerType, organisationName / firstName+lastName, phoneNumber | 1–n Booking, RefreshToken, PasswordResetToken |
+| `User` | email, password (BCrypt), role, customerType, organisationName / firstName+lastName, phoneNumber | 1–n Booking, RefreshToken, PasswordResetToken |
 | `Room` | name, capacity, location, pricePerDay, roomStatus, imageUrl, active | 1–n RoomImage, 1–n Booking |
 | `RoomImage` | imageUrl, position | n–1 Room |
 | `Booking` | startTime, endTime, createdAt | n–1 Room, n–1 User, 1–1 Payment |
 | `Payment` | amount, status (PENDING/PAID), appliedDiscountCode, paidAt | 1–1 Booking, 1–1 Invoice |
-| `Invoice` | invoiceNumber, customerUsernameSnapshot, roomNameSnapshot, amount, invoiceDate | 1–1 Payment |
+| `Invoice` | invoiceNumber, customerEmailSnapshot, roomNameSnapshot, amount, invoiceDate | 1–1 Payment |
 | `DiscountCode` | code, type (PERCENT/ABSOLUTE), value, validFrom, validUntil, active | keine (nur als String in `Payment.appliedDiscountCode` referenziert) |
 | `RefreshToken`, `PasswordResetToken` | token, expiresAt, revoked/used | n–1 User |
 
