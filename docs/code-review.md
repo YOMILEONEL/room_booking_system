@@ -229,16 +229,21 @@ NextAuth-CSRF/Login/Update-Zyklus): E-Mail geändert → alter Access-Token lief
 reproduziert) → `update()`-Aufruf → Antwort enthält sowohl die neue `session.user.email` als
 auch einen neuen Access-Token mit der neuen E-Mail als `sub` → neuer Token funktioniert (200).
 
-### 6.2 Buchungsstatus ist in West-Zeitzonen um einen Tag versetzt — HOCH
-`components/BookingTable.tsx:25-40`. Ein reines Datum (`"2026-08-08"`) wird als UTC-Mitternacht
-geparst und dann auf lokale Mitternacht "geschnappt" — westlich von UTC verschiebt das Start/Ende
-um einen Tag zurück. In Deutschland unsichtbar, für Nutzer in anderen Zeitzonen (z. B. USA) zeigt
-die UI eine Buchung fälschlich als "abgelaufen" und den Löschen-Button an, obwohl das Backend die
-Buchung korrekt als laufend erkennt und mit 409 ablehnt.
+### 6.2 Buchungsstatus ist in West-Zeitzonen um einen Tag versetzt — behoben
+`getBookingStatus` in `components/BookingTable.tsx` vergleicht jetzt reine `"YYYY-MM-DD"`-Strings
+(heutiges Datum in lokaler Zeit vs. `start`/`end`) statt über `Date`-Objekte. Der alte Code parste
+ein reines Datum wie `"2026-08-08"` als UTC-Mitternacht und "schnappte" es dann per `setHours`
+auf lokale Mitternacht — westlich von UTC verschob das Start/Ende um einen Tag zurück. `LocalDate`
+kennt keine Zeitzone, ein reiner Stringvergleich bildet das korrekt ab und ist zeitzonenunabhängig.
+Mit vier Fällen (laufend, zukünftig, abgelaufen, ein Tag) verifiziert; live gegen die laufenden
+Container deployt, `/profile` (nutzt `BookingTable`) lädt fehlerfrei.
 
-### 6.3 "Ist diese Buchung löschbar"-Logik existiert doppelt und weicht dadurch ab — HOCH
-`components/BookingTable.tsx:123` vs. Backend `BookingServiceImpl.java:70-77`. Zwei unabhängige
-Implementierungen derselben Regel — durch 6.2 in der Praxis nicht immer synchron.
+### 6.3 "Ist diese Buchung löschbar"-Logik existiert doppelt — MITTEL (Ursache für die Abweichung behoben, Duplikation bleibt)
+`components/BookingTable.tsx` vs. Backend `BookingServiceImpl.deleteBooking`. Zwei unabhängige
+Implementierungen derselben Regel bestehen weiterhin — das ist nicht behoben und bräuchte eine
+gemeinsame Quelle (z. B. den `canDelete`-Status vom Backend mitliefern lassen). Durch die
+6.2-Korrektur landen beide Implementierungen aber wieder auf demselben Kalendertag-Modell und
+weichen dadurch praktisch nicht mehr ab wie zuvor beschrieben.
 
 ### 6.4 Zugriffstoken ist für clientseitiges JavaScript sichtbar — HOCH (bewusster Trade-off, aber undokumentiert)
 `api/auth/[...nextauth]/route.ts:133`. Das Spring-JWT wird über `session.accessToken` an den
@@ -291,7 +296,7 @@ der Nutzer sieht gar nichts und weiß nicht, ob das Konto angelegt wurde.
 3. ~~**Eindeutigkeit von `email`** auf DB-Ebene erzwingen (1.9)~~ — erledigt, siehe Deploy-Hinweis oben (Duplikate vorher prüfen).
 4. ~~**Passwort-Reset-Token nicht loggen** (2.1)~~ — teilweise erledigt (Default jetzt sicher), volle Lösung braucht echten Mailversand, siehe Hinweis oben.
 5. ~~**Session nach E-Mail-Änderung aktualisieren** (6.1)~~ — erledigt, live end-to-end verifiziert.
-6. **Zeitzonen-sichere Datumsvergleiche im Frontend** (6.2) statt `new Date(isoString)`.
+6. ~~**Zeitzonen-sichere Datumsvergleiche im Frontend** (6.2)~~ — erledigt, reiner Kalendertag-Stringvergleich statt `new Date(isoString)`.
 7. Rest nach Zeit/Interesse — die Tabellen oben sind vollständig genug, um einzeln priorisiert zu werden.
 
 Bis auf die oben abgehakten Punkte wurde kein weiterer Punkt in diesem Dokument automatisch behoben.

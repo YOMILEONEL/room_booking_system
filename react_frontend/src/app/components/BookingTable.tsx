@@ -26,16 +26,17 @@ const BookingTable: React.FC = () => {
     start: string,
     end: string
   ): "Zukünftig" | "Laufend" | "Abgelaufen" => {
-    const today = new Date();
-    const s = new Date(start);
-    const e = new Date(end);
+    // Reiner Kalendertag-Vergleich als "YYYY-MM-DD"-Strings (wie vom Backend als LocalDate
+    // geliefert) statt über Date-Objekte: new Date("2026-08-08") wird als UTC-Mitternacht
+    // geparst, setHours(0,0,0,0) schnappt das anschließend auf lokale Mitternacht - westlich
+    // von UTC verschiebt das Start/Ende um einen Tag zurück und zeigt laufende Buchungen
+    // fälschlich als abgelaufen. LocalDate kennt keine Zeitzone, also bleiben wir konsequent
+    // bei reinen Kalendertagen.
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
-    s.setHours(0, 0, 0, 0);
-    e.setHours(23, 59, 59, 999);
-    today.setHours(12, 0, 0, 0);
-
-    if (today < s) return "Zukünftig";
-    if (today > e) return "Abgelaufen";
+    if (today < start) return "Zukünftig";
+    if (today > end) return "Abgelaufen";
     return "Laufend";
   };
 
