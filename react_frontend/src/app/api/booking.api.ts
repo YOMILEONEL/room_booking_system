@@ -30,8 +30,10 @@ export type AdminBookingRequest = {
   discountCode?: string;
 };
 
-export async function fetchBookingsForUser(userId: string): Promise<Booking[]> {
-  const data = await apiFetch<Booking[] | null>(`${BASE}/getAll/${userId}`);
+// The backend derives "which user" from the authenticated session, not from the URL - the old
+// {userId} path segment was accepted but ignored there (see docs/code-review.md, section 3).
+export async function fetchBookings(): Promise<Booking[]> {
+  const data = await apiFetch<Booking[] | null>(`${BASE}/getAll`);
   return Array.isArray(data) ? data : [];
 }
 
@@ -43,6 +45,6 @@ export async function createBookingForCustomer(payload: AdminBookingRequest): Pr
   return apiFetch<Booking>(`${BASE}/admin-add`, { method: "POST", body: payload });
 }
 
-export async function deleteBooking(bookingId: string, userId: string): Promise<void> {
-  await apiFetch<void>(`${BASE}/delete/${bookingId}/${userId}`, { method: "DELETE" });
+export async function deleteBooking(bookingId: string): Promise<void> {
+  await apiFetch<void>(`${BASE}/delete/${bookingId}`, { method: "DELETE" });
 }

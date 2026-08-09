@@ -6,9 +6,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import steve.bookingssystem.exception.InvalidTokenException;
+import steve.bookingssystem.user.model.User;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -90,5 +93,31 @@ class RefreshTokenServiceImplTest {
         refreshTokenService.revoke("missing");
 
         verify(refreshTokenRepository, never()).save(any());
+    }
+
+    @Test
+    void revokeAllForUser_revokesEveryActiveToken() {
+        User user = new User();
+        user.setId(UUID.randomUUID());
+        RefreshToken tokenA = token(false, Instant.now().plusSeconds(3600));
+        RefreshToken tokenB = token(false, Instant.now().plusSeconds(3600));
+        when(refreshTokenRepository.findByUser_IdAndRevokedFalse(user.getId()))
+                .thenReturn(List.of(tokenA, tokenB));
+
+        refreshTokenService.revokeAllForUser(user);
+
+        assertThat(tokenA.isRevoked()).isTrue();
+        assertThat(tokenB.isRevoked()).isTrue();
+        verify(refreshTokenRepository).saveAll(List.of(tokenA, tokenB));
+    }
+
+    @Test
+    void deleteExpired_deletesOnlyTokensPastExpiry() {
+        RefreshToken expired = token(false, Instant.now().minusSeconds(1));
+        when(refreshTokenRepository.findByExpiresAtBefore(any())).thenReturn(List.of(expired));
+
+        refreshTokenService.deleteExpired();
+
+        verify(refreshTokenRepository).deleteAll(List.of(expired));
     }
 }

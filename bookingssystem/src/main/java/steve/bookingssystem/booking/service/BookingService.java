@@ -8,9 +8,9 @@ import java.util.List;
 import java.util.UUID;
 
 public interface BookingService {
-    void deleteBooking(UUID id, UUID userId);
-    BookingResponseDTO getBooking(UUID id, UUID userId);
-    List<BookingResponseDTO> getBookings(UUID userId);
+    void deleteBooking(UUID id);
+    BookingResponseDTO getBooking(UUID id);
+    List<BookingResponseDTO> getBookings();
     BookingResponseDTO addBooking(BookingDTO booking);
     BookingResponseDTO addBookingForCustomer(AdminBookingDTO booking);
 }

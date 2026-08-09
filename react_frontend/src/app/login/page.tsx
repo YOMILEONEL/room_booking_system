@@ -91,8 +91,10 @@ function AuthForm() {
       // direkt einloggen, damit sofort eine Session existiert
       const result = await signIn("credentials", { email, password, redirect: false });
       if (result?.error) {
+        // Nicht switchMode(...) - das würde den Fehler, der im selben Zug gesetzt wird,
+        // sofort wieder löschen (beide setError-Aufrufe landen im selben Render).
+        setMode("login");
         setError("Registrierung erfolgreich, Login fehlgeschlagen. Bitte manuell einloggen.");
-        switchMode("login");
         return;
       }
       router.push("/");

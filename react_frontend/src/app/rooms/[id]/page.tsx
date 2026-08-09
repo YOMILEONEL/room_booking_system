@@ -20,6 +20,7 @@ import {
   type RoomStatus,
 } from "../../api/room.api";
 import { roomImages, defaultRoomImage } from "../../lib/roomImages";
+import { formatLocalDate } from "../../lib/formatDate";
 import { Card, Badge, Button, TextInput, Textarea, Select, Alert } from "../../components/ui";
 
 const currency = new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" });
@@ -223,7 +224,7 @@ export default function RoomDetailPage() {
                 <div className="flex items-start justify-between gap-2">
                   <h1 className="text-2xl font-bold">{room.name}</h1>
                   {room.bookedUntil ? (
-                    <Badge variant="pending">Gebucht bis {room.bookedUntil}</Badge>
+                    <Badge variant="pending">Gebucht bis {formatLocalDate(room.bookedUntil)}</Badge>
                   ) : (
                     <Badge variant={available ? "success" : "neutral"}>
                       {available ? "Verfügbar" : "Gebucht"}
@@ -236,12 +237,12 @@ export default function RoomDetailPage() {
                   {room.sizeSquareMeters != null && ` · ${room.sizeSquareMeters} m²`}
                 </p>
                 <p className="text-lg font-semibold text-primary">
-                  {room.effectivePricePerDay < room.pricePerDay && (
+                  {(room.effectivePricePerDay ?? room.pricePerDay) < room.pricePerDay && (
                     <span className="line-through text-text-muted font-normal mr-1.5">
                       {currency.format(room.pricePerDay)}
                     </span>
                   )}
-                  {currency.format(room.effectivePricePerDay)} / Tag
+                  {currency.format(room.effectivePricePerDay ?? room.pricePerDay)} / Tag
                 </p>
                 {room.description && (
                   <div className="pt-2 mt-1 border-t border-border-subtle">

@@ -20,6 +20,7 @@ export default function RaumAdd() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   // Wird erhöht, um RoomTable neu zu laden (über key-Prop)
   const [reloadCounter, setReloadCounter] = useState(0);
@@ -56,6 +57,7 @@ export default function RaumAdd() {
       roomStatus,
     };
 
+    setSubmitting(true);
     try {
       const room = await createRoom(newRoom);
       let imageFailed = false;
@@ -89,6 +91,8 @@ export default function RaumAdd() {
     } catch (err) {
       console.error("Fehler beim Erstellen des Raums:", err);
       setError("Es ist ein Fehler beim Speichern aufgetreten.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -178,8 +182,8 @@ export default function RaumAdd() {
             {error && <Alert variant="danger">{error}</Alert>}
             {success && <Alert variant="success">{success}</Alert>}
 
-            <Button type="submit" className="w-full sm:w-auto justify-self-start">
-              Raum erstellen
+            <Button type="submit" disabled={submitting} className="w-full sm:w-auto justify-self-start">
+              {submitting ? "Speichert..." : "Raum erstellen"}
             </Button>
           </div>
         </form>

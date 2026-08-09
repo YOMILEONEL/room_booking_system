@@ -32,20 +32,20 @@ public class BookingController {
         return bookingService.addBookingForCustomer(booking);
     }
 
-    @GetMapping("/getAll/{userId}")
-    public List<BookingResponseDTO> getBookings(@PathVariable UUID userId) {
-        return bookingService.getBookings(userId);
+    @GetMapping("/getAll")
+    public List<BookingResponseDTO> getBookings() {
+        return bookingService.getBookings();
     }
 
-    @DeleteMapping("/delete/{id}/{userId}")
+    @DeleteMapping("/delete/{id}")
     @ResponseStatus(HttpStatus.OK)
-    public void deleteBooking(@PathVariable UUID id, @PathVariable UUID userId) {
-        bookingService.deleteBooking(id, userId);
+    public void deleteBooking(@PathVariable UUID id) {
+        bookingService.deleteBooking(id);
     }
 
-    @GetMapping("get/{id}/{userId}")
-    public BookingResponseDTO getBooking(@PathVariable UUID id, @PathVariable UUID userId) {
-        return bookingService.getBooking(id, userId);
+    @GetMapping("get/{id}")
+    public BookingResponseDTO getBooking(@PathVariable UUID id) {
+        return bookingService.getBooking(id);
     }
 
 }

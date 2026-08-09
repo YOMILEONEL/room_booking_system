@@ -7,6 +7,7 @@ import steve.bookingssystem.user.model.User;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -58,5 +59,17 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
             refreshToken.setRevoked(true);
             refreshTokenRepository.save(refreshToken);
         });
+    }
+
+    @Override
+    public void revokeAllForUser(User user) {
+        List<RefreshToken> active = refreshTokenRepository.findByUser_IdAndRevokedFalse(user.getId());
+        active.forEach(refreshToken -> refreshToken.setRevoked(true));
+        refreshTokenRepository.saveAll(active);
+    }
+
+    @Override
+    public void deleteExpired() {
+        refreshTokenRepository.deleteAll(refreshTokenRepository.findByExpiresAtBefore(Instant.now()));
     }
 }

@@ -8,7 +8,8 @@ import {
   type DiscountCode,
   type DiscountType,
 } from "../api/discountCode.api";
-import { Card, Button, TextInput, Select, Badge, Alert } from "./ui";
+import { formatLocalDate } from "../lib/formatDate";
+import { Card, Button, TextInput, Select, Badge, Alert, ConfirmDialog } from "./ui";
 
 const TYPES: DiscountType[] = ["PERCENT", "ABSOLUTE"];
 
@@ -22,6 +23,9 @@ export default function DiscountCodeAdmin() {
   const [validFrom, setValidFrom] = useState("");
   const [validUntil, setValidUntil] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
   const loadCodes = async () => {
     try {
@@ -47,6 +51,7 @@ export default function DiscountCodeAdmin() {
       return;
     }
 
+    setSubmitting(true);
     try {
       await createDiscountCode({ code, type, value, validFrom, validUntil, active: true });
       setCode("");
@@ -57,19 +62,23 @@ export default function DiscountCodeAdmin() {
     } catch (err) {
       console.error("Fehler beim Erstellen des Rabattcodes:", err);
       setFormError("Rabattcode konnte nicht erstellt werden.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  const handleDelete = async (id: string) => {
-    const confirmed = window.confirm("Rabattcode wirklich löschen?");
-    if (!confirmed) return;
+  const handleDelete = async () => {
+    if (!pendingDeleteId) return;
+    setDeleteError(null);
 
     try {
-      await deleteDiscountCode(id);
-      setCodes((prev) => prev.filter((c) => c.id !== id));
+      await deleteDiscountCode(pendingDeleteId);
+      setCodes((prev) => prev.filter((c) => c.id !== pendingDeleteId));
     } catch (err) {
       console.error("Fehler beim Löschen des Rabattcodes:", err);
-      alert("Rabattcode konnte nicht gelöscht werden.");
+      setDeleteError("Rabattcode konnte nicht gelöscht werden.");
+    } finally {
+      setPendingDeleteId(null);
     }
   };
 
@@ -116,8 +125,8 @@ export default function DiscountCodeAdmin() {
 
           <div className="sm:col-span-2 grid gap-3">
             {formError && <Alert variant="danger">{formError}</Alert>}
-            <Button type="submit" className="w-full sm:w-auto justify-self-start">
-              Rabattcode erstellen
+            <Button type="submit" disabled={submitting} className="w-full sm:w-auto justify-self-start">
+              {submitting ? "Speichert..." : "Rabattcode erstellen"}
             </Button>
           </div>
         </form>
@@ -126,6 +135,11 @@ export default function DiscountCodeAdmin() {
       <div>
         <h2 className="text-lg font-bold mb-4">Rabattcodes</h2>
         {error && <Alert variant="danger">{error}</Alert>}
+        {deleteError && (
+          <div className="mb-4">
+            <Alert variant="danger">{deleteError}</Alert>
+          </div>
+        )}
         {codes.length === 0 && !error && (
           <p className="text-text-muted text-sm">Keine Rabattcodes vorhanden.</p>
         )}
@@ -143,10 +157,10 @@ export default function DiscountCodeAdmin() {
                 {c.type === "PERCENT" ? `${c.value}%` : `${c.value} €`} Rabatt
               </p>
               <p className="text-sm text-text-muted">
-                Gültig: {c.validFrom} – {c.validUntil}
+                Gültig: {formatLocalDate(c.validFrom)} – {formatLocalDate(c.validUntil)}
               </p>
               <button
-                onClick={() => handleDelete(c.id)}
+                onClick={() => setPendingDeleteId(c.id)}
                 className="text-sm font-medium text-danger hover:text-danger/80 transition-colors mt-2"
               >
                 Löschen
@@ -155,6 +169,15 @@ export default function DiscountCodeAdmin() {
           ))}
         </div>
       </div>
+
+      <ConfirmDialog
+        open={pendingDeleteId !== null}
+        title="Rabattcode löschen"
+        message="Rabattcode wirklich löschen?"
+        confirmLabel="Löschen"
+        onConfirm={handleDelete}
+        onCancel={() => setPendingDeleteId(null)}
+      />
     </div>
   );
 }

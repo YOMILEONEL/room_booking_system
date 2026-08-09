@@ -2,12 +2,13 @@
 
 import React, { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
-import { fetchBookingsForUser, deleteBooking, type Booking } from "../api/booking.api";
+import { fetchBookings, deleteBooking, type Booking } from "../api/booking.api";
 import { confirmPayment } from "../api/payment.api";
 import { fetchInvoicePdf } from "../api/invoice.api";
 import { extractErrorMessage } from "../api/apiClient";
 import { roomImages, defaultRoomImage } from "../lib/roomImages";
-import { Card, Badge, Button, Alert } from "./ui";
+import { formatLocalDate } from "../lib/formatDate";
+import { Card, Badge, Button, Alert, ConfirmDialog } from "./ui";
 
 const currency = new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" });
 
@@ -21,6 +22,8 @@ const BookingTable: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
   const getBookingStatus = (
     start: string,
@@ -45,7 +48,7 @@ const BookingTable: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await fetchBookingsForUser(userId);
+      const data = await fetchBookings();
       setBookings(data);
     } catch (err) {
       console.error(err);
@@ -60,18 +63,18 @@ const BookingTable: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
-  const handleDeleteBooking = async (bookingId: string) => {
-    if (!userId) return;
-
-    const confirmed = window.confirm(`Buchung mit ID ${bookingId} wirklich löschen?`);
-    if (!confirmed) return;
+  const handleDeleteBooking = async () => {
+    if (!userId || !pendingDeleteId) return;
+    setActionError(null);
 
     try {
-      await deleteBooking(bookingId, userId);
-      setBookings((prev) => prev.filter((b) => b.bookingId !== bookingId));
+      await deleteBooking(pendingDeleteId);
+      setBookings((prev) => prev.filter((b) => b.bookingId !== pendingDeleteId));
     } catch (err) {
       console.error(err);
-      alert(extractErrorMessage(err, "Fehler beim Löschen"));
+      setActionError(extractErrorMessage(err, "Fehler beim Löschen"));
+    } finally {
+      setPendingDeleteId(null);
     }
   };
 
@@ -83,11 +86,17 @@ const BookingTable: React.FC = () => {
       const link = document.createElement("a");
       link.href = url;
       link.download = `Rechnung-${booking.room?.name ?? booking.bookingId}.pdf`;
+      // The link must be in the DOM for .click() to reliably trigger a download in Firefox
+      // (Chrome tolerates a detached element, Firefox doesn't). Revoking the object URL is
+      // deferred too - doing it synchronously right after click() can race the browser actually
+      // starting the download (docs/code-review.md, 6.6).
+      document.body.appendChild(link);
       link.click();
-      URL.revokeObjectURL(url);
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (err) {
       console.error(err);
-      alert(extractErrorMessage(err, "Rechnung konnte nicht heruntergeladen werden."));
+      setActionError(extractErrorMessage(err, "Rechnung konnte nicht heruntergeladen werden."));
     } finally {
       setDownloadingId(null);
     }
@@ -95,12 +104,13 @@ const BookingTable: React.FC = () => {
 
   const handleConfirmPayment = async (paymentId: string) => {
     setConfirmingId(paymentId);
+    setActionError(null);
     try {
       await confirmPayment(paymentId);
       await loadBookings();
     } catch (err) {
       console.error(err);
-      alert("Zahlung konnte nicht bestätigt werden.");
+      setActionError("Zahlung konnte nicht bestätigt werden.");
     } finally {
       setConfirmingId(null);
     }
@@ -116,6 +126,12 @@ const BookingTable: React.FC = () => {
       <h2 className="text-lg font-bold mb-4">
         {isAdmin ? "Alle Buchungen" : "Meine Buchungen"}
       </h2>
+
+      {actionError && (
+        <div className="mb-4">
+          <Alert variant="danger">{actionError}</Alert>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {bookings.map((booking) => {
@@ -133,7 +149,7 @@ const BookingTable: React.FC = () => {
                   <h3 className="font-semibold">{room?.name}</h3>
                   {canDelete && (
                     <button
-                      onClick={() => handleDeleteBooking(booking.bookingId)}
+                      onClick={() => setPendingDeleteId(booking.bookingId)}
                       className="text-xs font-medium text-danger hover:text-danger/80 transition-colors"
                     >
                       Löschen
@@ -148,7 +164,7 @@ const BookingTable: React.FC = () => {
                   </p>
                 )}
                 <p className="text-sm text-text-secondary">
-                  Zeitraum: {startTime} – {endTime}
+                  Zeitraum: {formatLocalDate(startTime)} – {formatLocalDate(endTime)}
                 </p>
 
                 <div className="flex flex-wrap items-center gap-2 mt-1">
@@ -204,6 +220,15 @@ const BookingTable: React.FC = () => {
           );
         })}
       </div>
+
+      <ConfirmDialog
+        open={pendingDeleteId !== null}
+        title="Buchung löschen"
+        message="Möchtest du diese Buchung wirklich löschen?"
+        confirmLabel="Löschen"
+        onConfirm={handleDeleteBooking}
+        onCancel={() => setPendingDeleteId(null)}
+      />
     </div>
   );
 };

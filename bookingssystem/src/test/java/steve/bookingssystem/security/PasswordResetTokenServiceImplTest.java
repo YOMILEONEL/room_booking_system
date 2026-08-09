@@ -9,11 +9,13 @@ import steve.bookingssystem.exception.InvalidTokenException;
 import steve.bookingssystem.user.model.User;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -79,5 +81,15 @@ class PasswordResetTokenServiceImplTest {
         assertThat(result.getEmail()).isEqualTo("alice");
         assertThat(existing.isUsed()).isTrue();
         verify(passwordResetTokenRepository).save(existing);
+    }
+
+    @Test
+    void deleteExpired_deletesOnlyTokensPastExpiry() {
+        PasswordResetToken expired = token(false, Instant.now().minusSeconds(1));
+        when(passwordResetTokenRepository.findByExpiresAtBefore(any())).thenReturn(List.of(expired));
+
+        passwordResetTokenService.deleteExpired();
+
+        verify(passwordResetTokenRepository).deleteAll(List.of(expired));
     }
 }

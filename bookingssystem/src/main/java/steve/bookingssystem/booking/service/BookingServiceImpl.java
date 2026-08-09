@@ -48,7 +48,7 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     @Transactional
-    public void deleteBooking(UUID id, UUID userId) {
+    public void deleteBooking(UUID id) {
         Booking booking = bookingRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Booking not found: " + id));
         authorizationService.requireOwnerOrAdmin(booking.getUser().getId());
@@ -66,7 +66,7 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Override
-    public BookingResponseDTO getBooking(UUID id, UUID userId) {
+    public BookingResponseDTO getBooking(UUID id) {
         Booking booking = bookingRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Booking not found: " + id));
         authorizationService.requireOwnerOrAdmin(booking.getUser().getId());
@@ -74,7 +74,7 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Override
-    public List<BookingResponseDTO> getBookings(UUID userId) {
+    public List<BookingResponseDTO> getBookings() {
         List<Booking> bookings;
         if (authorizationService.isAdmin()) {
             bookings = bookingRepository.findAll();
@@ -133,6 +133,13 @@ public class BookingServiceImpl implements BookingService {
 
         Room room = roomRepository.findById(roomId)
                 .orElseThrow(() -> new ResourceNotFoundException("Room not found: " + roomId));
+
+        // RoomServiceImpl already hides inactive rooms from non-admins (404), but that's only a
+        // listing/detail-view concern - without this check, anyone who already knows (or guesses)
+        // a deactivated room's UUID could still book it directly (docs/code-review.md, 2.8).
+        if (!room.isActive()) {
+            throw new ResourceNotFoundException("Room not found: " + roomId);
+        }
 
         assertNoOverlap(room.getId(), startTime, endTime, null);
 

@@ -158,7 +158,7 @@ class BookingConflictIntegrationTest {
                         .content(bookingWithBadCode))
                 .andExpect(status().isBadRequest());
 
-        mockMvc.perform(get("/booking/getAll/" + memberId)
+        mockMvc.perform(get("/booking/getAll")
                         .header("Authorization", memberAuth))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isEmpty());

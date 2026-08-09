@@ -51,6 +51,18 @@ class DiscountCodeServiceImplTest {
     }
 
     @Test
+    void applyDiscount_percentRoundsToTwoDecimals() {
+        when(discountCodeRepository.findByCode("CODE")).thenReturn(Optional.of(
+                code(DiscountType.PERCENT, "10", LocalDate.now().minusDays(1), LocalDate.now().plusDays(1), true)));
+
+        // 99.99 * 0.9 = 89.991 - would carry a third decimal without rounding.
+        BigDecimal result = discountCodeService.applyDiscount("CODE", new BigDecimal("99.99"));
+
+        assertThat(result).isEqualByComparingTo("89.99");
+        assertThat(result.scale()).isEqualTo(2);
+    }
+
+    @Test
     void applyDiscount_absoluteIsCappedAtZero() {
         when(discountCodeRepository.findByCode("CODE")).thenReturn(Optional.of(
                 code(DiscountType.ABSOLUTE, "500", LocalDate.now().minusDays(1), LocalDate.now().plusDays(1), true)));

@@ -25,11 +25,6 @@ public class UserServiceImpl implements UserService {
     private AuthorizationService authorizationService;
 
     @Override
-    public User addUser(User user) {
-        return userRepository.save(user);
-    }
-
-    @Override
     public void updateUser(UUID id, UpdateUserRequest request) {
         User existingUser = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + id));

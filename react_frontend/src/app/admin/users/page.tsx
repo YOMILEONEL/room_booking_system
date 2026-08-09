@@ -2,10 +2,14 @@
 
 import * as React from "react";
 import UserTable from "../../components/UserTable";
+import { Alert, ConfirmDialog } from "../../components/ui";
+import { extractErrorMessage } from "../../api/apiClient";
 import { fetchAllUsers, deleteUser, type User } from "../../api/user.api";
 
 export default function AdminUsersPage() {
   const [users, setUsers] = React.useState<User[]>([]);
+  const [error, setError] = React.useState<string | null>(null);
+  const [pendingDeleteId, setPendingDeleteId] = React.useState<string | null>(null);
 
   const getAll = React.useCallback(async () => {
     try {
@@ -13,6 +17,7 @@ export default function AdminUsersPage() {
       setUsers(data);
     } catch (error) {
       console.error("Error by call of Users:", error);
+      setError("Benutzer konnten nicht geladen werden.");
     }
   }, []);
 
@@ -20,19 +25,38 @@ export default function AdminUsersPage() {
     getAll();
   }, [getAll]);
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async () => {
+    if (!pendingDeleteId) return;
+    setError(null);
     try {
-      await deleteUser(id);
-      getAll();
+      await deleteUser(pendingDeleteId);
+      await getAll();
     } catch (error) {
       console.error("Failed to delete user:", error);
+      setError(extractErrorMessage(error, "Benutzer konnte nicht gelöscht werden."));
+    } finally {
+      setPendingDeleteId(null);
     }
   };
 
   return (
     <div>
       <h1 className="text-xl font-bold mb-4">Benutzerverwaltung</h1>
-      <UserTable users={users} onDelete={handleDelete} />
+      {error && (
+        <div className="mb-4">
+          <Alert variant="danger">{error}</Alert>
+        </div>
+      )}
+      <UserTable users={users} onDelete={setPendingDeleteId} />
+
+      <ConfirmDialog
+        open={pendingDeleteId !== null}
+        title="Benutzer löschen"
+        message="Möchtest du diesen Benutzer wirklich löschen? Das kann nicht rückgängig gemacht werden."
+        confirmLabel="Löschen"
+        onConfirm={handleDelete}
+        onCancel={() => setPendingDeleteId(null)}
+      />
     </div>
   );
 }

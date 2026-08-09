@@ -54,4 +54,9 @@ public class PasswordResetTokenServiceImpl implements PasswordResetTokenService 
 
         return passwordResetToken.getUser();
     }
+
+    @Override
+    public void deleteExpired() {
+        passwordResetTokenRepository.deleteAll(passwordResetTokenRepository.findByExpiresAtBefore(Instant.now()));
+    }
 }

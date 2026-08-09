@@ -9,6 +9,7 @@ import steve.bookingssystem.exception.ResourceNotFoundException;
 import steve.bookingssystem.security.AuthorizationService;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -59,12 +60,15 @@ public class DiscountCodeServiceImpl implements DiscountCodeService {
             throw new IllegalArgumentException("Discount code is not currently valid: " + code);
         }
 
+        // Rounded to 2 decimals like CustomerType.applyPricing does - without this, the stored
+        // payment amount could carry more fractional digits than what was shown/confirmed to the
+        // customer (e.g. a 15% cut leaves an exact-but-unrounded value).
         BigDecimal value = discountCode.getValue();
         if (discountCode.getType() == DiscountType.PERCENT) {
             BigDecimal factor = BigDecimal.ONE.subtract(value.divide(BigDecimal.valueOf(100)));
-            return amount.multiply(factor).max(BigDecimal.ZERO);
+            return amount.multiply(factor).max(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP);
         }
 
-        return amount.subtract(value).max(BigDecimal.ZERO);
+        return amount.subtract(value).max(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP);
     }
 }

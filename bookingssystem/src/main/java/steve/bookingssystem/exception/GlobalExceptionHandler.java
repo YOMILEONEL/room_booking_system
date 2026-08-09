@@ -4,6 +4,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -32,6 +33,15 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(InvalidTokenException.class)
     public ResponseEntity<Map<String, String>> handleInvalidToken(InvalidTokenException ex) {
         return errorBody(HttpStatus.UNAUTHORIZED, ex.getMessage());
+    }
+
+    // Thrown by AuthenticationManager.authenticate(...) on login (bad credentials, disabled
+    // account, ...) - a fixed generic message regardless of the concrete subtype, so a failed
+    // login never reveals *why* it failed (anti-enumeration, same reasoning as forgot-password's
+    // generic response).
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<Map<String, String>> handleAuthenticationException(AuthenticationException ex) {
+        return errorBody(HttpStatus.UNAUTHORIZED, "E-Mail-Adresse oder Passwort falsch");
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

@@ -13,6 +13,7 @@ import steve.bookingssystem.booking.model.BookingResponseDTO;
 import steve.bookingssystem.booking.repository.BookingRepository;
 import steve.bookingssystem.discount.service.DiscountCodeService;
 import steve.bookingssystem.exception.BookingConflictException;
+import steve.bookingssystem.exception.ResourceNotFoundException;
 import steve.bookingssystem.payment.model.Payment;
 import steve.bookingssystem.payment.model.PaymentStatus;
 import steve.bookingssystem.payment.repository.PaymentRepository;
@@ -144,6 +145,21 @@ class BookingServiceImplTest {
     }
 
     @Test
+    void addBooking_rejectsDeactivatedRoom() {
+        Room inactiveRoom = room(new BigDecimal("100.00"));
+        inactiveRoom.setActive(false);
+        when(roomRepository.findById(ROOM_ID)).thenReturn(Optional.of(inactiveRoom));
+        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user()));
+
+        assertThatThrownBy(() -> bookingService.addBooking(
+                dto(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 3), null)))
+                .isInstanceOf(ResourceNotFoundException.class);
+
+        verify(paymentRepository, never()).save(any());
+        verify(bookingRepository, never()).save(any());
+    }
+
+    @Test
     void addBooking_rejectsWhenCallerIsNeitherOwnerNorAdmin() {
         doThrow(new AccessDeniedException("Not allowed"))
                 .when(authorizationService).requireOwnerOrAdmin(USER_ID);
@@ -174,7 +190,7 @@ class BookingServiceImplTest {
         Booking booking = booking(LocalDate.of(2020, 1, 1), LocalDate.of(2020, 1, 3), PaymentStatus.PAID);
         when(bookingRepository.findById(booking.getBookingId())).thenReturn(Optional.of(booking));
 
-        assertThatThrownBy(() -> bookingService.deleteBooking(booking.getBookingId(), USER_ID))
+        assertThatThrownBy(() -> bookingService.deleteBooking(booking.getBookingId()))
                 .isInstanceOf(BookingConflictException.class);
 
         verify(bookingRepository, never()).delete(any());
@@ -186,7 +202,7 @@ class BookingServiceImplTest {
         Booking booking = booking(today.minusDays(1), today.plusDays(1), PaymentStatus.PENDING);
         when(bookingRepository.findById(booking.getBookingId())).thenReturn(Optional.of(booking));
 
-        assertThatThrownBy(() -> bookingService.deleteBooking(booking.getBookingId(), USER_ID))
+        assertThatThrownBy(() -> bookingService.deleteBooking(booking.getBookingId()))
                 .isInstanceOf(BookingConflictException.class);
 
         verify(bookingRepository, never()).delete(any());
@@ -197,7 +213,7 @@ class BookingServiceImplTest {
         Booking booking = booking(LocalDate.of(2099, 1, 1), LocalDate.of(2099, 1, 3), PaymentStatus.PENDING);
         when(bookingRepository.findById(booking.getBookingId())).thenReturn(Optional.of(booking));
 
-        bookingService.deleteBooking(booking.getBookingId(), USER_ID);
+        bookingService.deleteBooking(booking.getBookingId());
 
         verify(bookingRepository).delete(booking);
     }

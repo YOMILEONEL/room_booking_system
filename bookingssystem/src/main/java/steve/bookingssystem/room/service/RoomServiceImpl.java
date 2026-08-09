@@ -46,7 +46,9 @@ public class RoomServiceImpl implements RoomService {
         LocalDate today = LocalDate.now();
         LocalDate bookedUntil = bookingRepository
                 .findByRoom_IdAndStartTimeLessThanEqualAndEndTimeGreaterThanEqual(id, today, today)
+                .stream()
                 .map(Booking::getEndTime)
+                .max(LocalDate::compareTo)
                 .orElse(null);
 
         BigDecimal effectivePrice = effectivePrice(room.getPricePerDay());
@@ -61,10 +63,18 @@ public class RoomServiceImpl implements RoomService {
                 : roomRepository.findByActiveTrue();
 
         LocalDate today = LocalDate.now();
+        // Merge function instead of the default Collectors.toMap(keyMapper, valueMapper), which
+        // throws IllegalStateException("Duplicate key ...") the moment two active bookings exist
+        // for the same room today (e.g. via the 1.5 overlap race) - that exception used to take
+        // down the entire room list (GET /room/Get -> 409) for every user. Keep the later end
+        // date, since that's the more useful "booked until" value to show.
         Map<UUID, LocalDate> bookedUntilByRoom = bookingRepository
                 .findByStartTimeLessThanEqualAndEndTimeGreaterThanEqual(today, today)
                 .stream()
-                .collect(Collectors.toMap(b -> b.getRoom().getId(), Booking::getEndTime));
+                .collect(Collectors.toMap(
+                        b -> b.getRoom().getId(),
+                        Booking::getEndTime,
+                        (existing, candidate) -> existing.isAfter(candidate) ? existing : candidate));
 
         CustomerType customerType = authorizationService.currentCustomerType();
 
@@ -94,7 +104,12 @@ public class RoomServiceImpl implements RoomService {
         roomExist.setCity(roomDetails.getCity());
         roomExist.setDescription(roomDetails.getDescription());
         roomExist.setPricePerDay(roomDetails.getPricePerDay());
-        roomExist.setRoomStatus(roomDetails.getRoomStatus());
+        // Guarded like the other optional fields below it conceptually should be: a request body
+        // that omits roomStatus deserializes it as null, and an unconditional set would silently
+        // wipe the room's current status instead of leaving it untouched.
+        if (roomDetails.getRoomStatus() != null) {
+            roomExist.setRoomStatus(roomDetails.getRoomStatus());
+        }
         return roomRepository.save(roomExist);
     }
 

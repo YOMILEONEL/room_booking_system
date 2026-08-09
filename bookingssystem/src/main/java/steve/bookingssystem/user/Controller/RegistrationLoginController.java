@@ -5,7 +5,6 @@ import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -20,6 +19,7 @@ import steve.bookingssystem.user.model.AccessTokenResponse;
 import steve.bookingssystem.user.model.AuthResponse;
 import steve.bookingssystem.user.model.CustomerType;
 import steve.bookingssystem.user.model.ForgotPasswordRequest;
+import steve.bookingssystem.user.model.LoginRequest;
 import steve.bookingssystem.user.model.RefreshRequest;
 import steve.bookingssystem.user.model.RegisterRequest;
 import steve.bookingssystem.user.model.ResetPasswordRequest;
@@ -90,18 +90,19 @@ public class RegistrationLoginController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> loginUser(@RequestBody User user) {
-        try{
-            authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(user.getEmail(), user.getPassword()));
-            User user1 = userRepository.findByEmail(user.getEmail());
-            String accessToken = jwtService.generateAccessToken(userDetailsService.loadUserByUsername(user1.getEmail()));
-            RefreshToken refreshToken = refreshTokenService.create(user1);
-            AuthResponse response = new AuthResponse(user1.getId(), user1.getEmail(), user1.getDisplayName(), user1.getRole(), user1.getCustomerType(), accessToken, refreshToken.getToken());
-            return new ResponseEntity<Object>(response, HttpStatus.OK);
-        }
-        catch(Exception e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("E-Mail-Adresse oder Passwort falsch");
-        }
+    public ResponseEntity<AuthResponse> loginUser(@Valid @RequestBody LoginRequest request) {
+        // Narrowed from catch(Exception e): that used to also swallow unrelated failures (DB
+        // down, NPE) and mislabel them as "wrong password" - only AuthenticationException means
+        // that. Anything else now propagates and surfaces as a real 500 instead of a lie.
+        // AuthenticationException itself is handled centrally by GlobalExceptionHandler, giving
+        // login the same {"error": "..."} response shape as every other endpoint (see
+        // docs/code-review.md, 2.5 and the "three different error response shapes" 3.x finding).
+        authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(request.email(), request.password()));
+        User user = userRepository.findByEmail(request.email());
+        String accessToken = jwtService.generateAccessToken(userDetailsService.loadUserByUsername(user.getEmail()));
+        RefreshToken refreshToken = refreshTokenService.create(user);
+        AuthResponse response = new AuthResponse(user.getId(), user.getEmail(), user.getDisplayName(), user.getRole(), user.getCustomerType(), accessToken, refreshToken.getToken());
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/refresh")
@@ -140,5 +141,8 @@ public class RegistrationLoginController {
         User user = passwordResetTokenService.consume(request.token());
         user.setPassword(passwordEncoder.encode(request.newPassword()));
         userRepository.save(user);
+        // Otherwise an attacker who stole a refresh token stays logged in for up to 30 days
+        // even after the legitimate owner resets the password (see docs/code-review.md, 2.2).
+        refreshTokenService.revokeAllForUser(user);
     }
 }

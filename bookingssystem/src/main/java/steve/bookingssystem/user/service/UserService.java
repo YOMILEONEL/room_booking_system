@@ -9,7 +9,6 @@ import java.util.List;
 import java.util.UUID;
 
 public interface UserService  {
-    User addUser(User user);
     void updateUser(UUID id, UpdateUserRequest request);
     void deleteUser(UUID id);
     User getUserById(UUID id);

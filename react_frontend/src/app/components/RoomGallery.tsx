@@ -59,6 +59,8 @@ export default function RoomGallery({ images, alt }: RoomGalleryProps) {
               key={i}
               type="button"
               onClick={() => setActiveIndex(i)}
+              aria-label={`Bild ${i + 1} von ${sources.length} anzeigen`}
+              aria-current={i === clampedIndex}
               className={`shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-colors ${
                 i === clampedIndex ? "border-primary" : "border-transparent"
               }`}

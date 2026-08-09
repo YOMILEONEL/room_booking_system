@@ -50,26 +50,17 @@ public class JwtService {
                 .compact();
     }
 
+    // Expiry is not re-checked here: JJWT's parser (in extractAllClaims below) already enforces
+    // the "exp" claim during parsing and throws ExpiredJwtException for an expired token - by the
+    // time we would get here, extractSubject(token) would already have thrown and JwtAuthFilter's
+    // surrounding try/catch would have short-circuited before ever calling isTokenValid.
     public boolean isTokenValid(String token, UserDetails user) {
         String subject = extractSubject(token);
-        return subject.equals(user.getUsername()) && !isExpired(token);
+        return subject.equals(user.getUsername());
     }
 
     public String extractSubject(String token) {
         return extractAllClaims(token).getSubject();
-    }
-
-    public List<String> extractRoles(String token) {
-        Object roles = extractAllClaims(token).get("roles");
-        if (roles instanceof List<?> list) {
-            return list.stream().map(String::valueOf).toList();
-        }
-        return List.of();
-    }
-
-    private boolean isExpired(String token) {
-        Date exp = extractAllClaims(token).getExpiration();
-        return exp.before(new Date());
     }
 
     private Claims extractAllClaims(String token) {

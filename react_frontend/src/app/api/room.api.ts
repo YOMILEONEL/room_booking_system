@@ -13,7 +13,10 @@ export type Room = {
   city: string;
   description: string;
   pricePerDay: number;
-  effectivePricePerDay: number;
+  // Optional, not just a naming quirk: this is computed (org discount for the current viewer),
+  // not a real column - the raw Room entity embedded in a Booking response (Booking.room) never
+  // carries it, only RoomResponseDTO from the /room endpoints does (docs/code-review.md, 6.6).
+  effectivePricePerDay?: number;
   roomStatus: RoomStatus;
   imageUrl?: string | null;
   active?: boolean;

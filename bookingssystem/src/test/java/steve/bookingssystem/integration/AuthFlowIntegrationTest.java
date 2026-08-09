@@ -53,15 +53,14 @@ class AuthFlowIntegrationTest {
         JsonNode auth = objectMapper.readTree(registerResponse);
         String accessToken = auth.get("accessToken").asText();
         String refreshToken = auth.get("refreshToken").asText();
-        String userId = auth.get("id").asText();
 
         // Access token works against a protected endpoint.
-        mockMvc.perform(get("/booking/getAll/" + userId)
+        mockMvc.perform(get("/booking/getAll")
                         .header("Authorization", "Bearer " + accessToken))
                 .andExpect(status().isOk());
 
         // Protected endpoint rejects requests without a token.
-        mockMvc.perform(get("/booking/getAll/" + userId))
+        mockMvc.perform(get("/booking/getAll"))
                 .andExpect(status().isForbidden());
 
         // Refresh yields a usable new access token.
@@ -83,5 +82,33 @@ class AuthFlowIntegrationTest {
                         .content(refreshBody))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error").isNotEmpty());
+    }
+
+    // Regression test for docs/code-review.md 2.5: login used to catch(Exception e) and return
+    // a plain-text 401 body, a shape unique to this one endpoint. It now goes through
+    // AuthenticationManager -> AuthenticationException -> GlobalExceptionHandler, the same
+    // {"error": "..."} JSON shape every other endpoint uses.
+    @Test
+    void login_withWrongPassword_returnsJsonErrorNotPlainText() throws Exception {
+        String email = "auth-flow-wrong-pw-" + UUID.randomUUID() + "@test.example";
+        String registerBody = objectMapper.writeValueAsString(Map.of(
+                "email", email,
+                "password", "password123",
+                "customerType", "KUNDE",
+                "firstName", "Auth",
+                "lastName", "Flow",
+                "phoneNumber", "0123456789"
+        ));
+        mockMvc.perform(post("/api/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(registerBody))
+                .andExpect(status().isOk());
+
+        String loginBody = objectMapper.writeValueAsString(Map.of("email", email, "password", "totally-wrong"));
+        mockMvc.perform(post("/api/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(loginBody))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error").value("E-Mail-Adresse oder Passwort falsch"));
     }
 }

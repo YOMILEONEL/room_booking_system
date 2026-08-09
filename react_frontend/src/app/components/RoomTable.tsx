@@ -4,6 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { fetchRooms, activateRoom, deactivateRoom, type Room } from "../api/room.api";
 import { roomImages, defaultRoomImage } from "../lib/roomImages";
+import { formatLocalDate } from "../lib/formatDate";
 import { Card, Badge, Alert, TextInput } from "./ui";
 
 const currency = new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" });
@@ -11,6 +12,7 @@ const currency = new Intl.NumberFormat("de-DE", { style: "currency", currency: "
 export default function RoomTable({ isAdmin = false }: { isAdmin?: boolean }) {
   const [rooms, setRooms] = React.useState<Room[]>([]);
   const [error, setError] = React.useState<string | null>(null);
+  const [toggleError, setToggleError] = React.useState<string | null>(null);
   const [query, setQuery] = React.useState("");
 
   const loadRooms = React.useCallback(async () => {
@@ -29,6 +31,7 @@ export default function RoomTable({ isAdmin = false }: { isAdmin?: boolean }) {
   }, [loadRooms]);
 
   const handleToggleActive = async (room: Room) => {
+    setToggleError(null);
     try {
       if (room.active === false) {
         await activateRoom(room.id);
@@ -38,7 +41,7 @@ export default function RoomTable({ isAdmin = false }: { isAdmin?: boolean }) {
       loadRooms();
     } catch (err) {
       console.error("Fehler beim Ändern des Status:", err);
-      alert("Status konnte nicht geändert werden.");
+      setToggleError("Status konnte nicht geändert werden.");
     }
   };
 
@@ -66,6 +69,12 @@ export default function RoomTable({ isAdmin = false }: { isAdmin?: boolean }) {
       {error && (
         <div className="mb-4">
           <Alert variant="danger">{error}</Alert>
+        </div>
+      )}
+
+      {toggleError && (
+        <div className="mb-4">
+          <Alert variant="danger">{toggleError}</Alert>
         </div>
       )}
 
@@ -100,7 +109,7 @@ export default function RoomTable({ isAdmin = false }: { isAdmin?: boolean }) {
                     <div className="flex flex-col items-end gap-1">
                       {isInactive && <Badge variant="neutral">Inaktiv</Badge>}
                       {room.bookedUntil ? (
-                        <Badge variant="pending">Gebucht bis {room.bookedUntil}</Badge>
+                        <Badge variant="pending">Gebucht bis {formatLocalDate(room.bookedUntil)}</Badge>
                       ) : (
                         <Badge variant={available ? "success" : "neutral"}>
                           {available ? "Verfügbar" : "Gebucht"}
@@ -114,12 +123,12 @@ export default function RoomTable({ isAdmin = false }: { isAdmin?: boolean }) {
                     {room.sizeSquareMeters != null && ` · ${room.sizeSquareMeters} m²`}
                   </p>
                   <p className="text-sm font-semibold text-primary mt-auto">
-                    {room.effectivePricePerDay < room.pricePerDay && (
+                    {(room.effectivePricePerDay ?? room.pricePerDay) < room.pricePerDay && (
                       <span className="line-through text-text-muted font-normal mr-1.5">
                         {currency.format(room.pricePerDay)}
                       </span>
                     )}
-                    {currency.format(room.effectivePricePerDay)} / Tag
+                    {currency.format(room.effectivePricePerDay ?? room.pricePerDay)} / Tag
                   </p>
                 </div>
               </Link>

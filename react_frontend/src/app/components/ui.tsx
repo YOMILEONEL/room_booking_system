@@ -24,8 +24,12 @@ export function Button({
   variant = "primary",
   className = "",
   children,
+  ref,
   ...props
-}: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: ButtonVariant }) {
+}: React.ButtonHTMLAttributes<HTMLButtonElement> & {
+  variant?: ButtonVariant;
+  ref?: React.Ref<HTMLButtonElement>;
+}) {
   const variants: Record<ButtonVariant, string> = {
     primary:
       "bg-primary hover:bg-primary-hover text-white disabled:bg-primary/40",
@@ -37,6 +41,7 @@ export function Button({
 
   return (
     <button
+      ref={ref}
       className={`px-4 py-2.5 rounded-xl font-semibold text-sm transition-colors disabled:cursor-not-allowed ${variants[variant]} ${className}`}
       {...props}
     >
@@ -141,19 +146,61 @@ export function ConfirmDialog({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
+  const titleId = React.useId();
+  const messageId = React.useId();
+  const cancelRef = React.useRef<HTMLButtonElement>(null);
+  const confirmRef = React.useRef<HTMLButtonElement>(null);
+
+  // Focus the (safe, non-destructive) cancel button on open, so keyboard users land somewhere
+  // inside the dialog instead of on whatever was focused on the page behind it.
+  React.useEffect(() => {
+    if (open) {
+      cancelRef.current?.focus();
+    }
+  }, [open]);
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === "Escape") {
+      e.stopPropagation();
+      onCancel();
+      return;
+    }
+    // Minimal focus trap: only two focusable elements, so Tab/Shift+Tab just needs to bounce
+    // between them instead of escaping into the page behind the overlay.
+    if (e.key === "Tab") {
+      const first = cancelRef.current;
+      const last = confirmRef.current;
+      if (!first || !last) return;
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
+  };
+
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center px-4">
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center px-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={titleId}
+      aria-describedby={messageId}
+      onKeyDown={handleKeyDown}
+    >
       <div className="absolute inset-0 bg-black/40" onClick={onCancel} />
       <div className="relative bg-card border border-border-subtle rounded-2xl p-6 w-full max-w-sm grid gap-4 shadow-xl">
-        <h2 className="text-lg font-bold">{title}</h2>
-        <p className="text-sm text-text-secondary">{message}</p>
+        <h2 id={titleId} className="text-lg font-bold">{title}</h2>
+        <p id={messageId} className="text-sm text-text-secondary">{message}</p>
         <div className="flex justify-end gap-3">
-          <Button variant="secondary" onClick={onCancel} className="text-sm py-2">
+          <Button ref={cancelRef} variant="secondary" onClick={onCancel} className="text-sm py-2">
             {cancelLabel}
           </Button>
-          <Button variant="danger" onClick={onConfirm} className="text-sm py-2">
+          <Button ref={confirmRef} variant="danger" onClick={onConfirm} className="text-sm py-2">
             {confirmLabel}
           </Button>
         </div>

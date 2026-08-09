@@ -29,6 +29,7 @@ const BookingAdd: React.FC<BookingAddProps> = ({ fixedRoomId, fixedRoomName, onB
 
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (fixedRoomId) return;
@@ -57,6 +58,7 @@ const BookingAdd: React.FC<BookingAddProps> = ({ fixedRoomId, fixedRoomName, onB
         return;
       }
 
+      setSubmitting(true);
       try {
         const result = await createBookingForCustomer({
           roomId,
@@ -77,6 +79,8 @@ const BookingAdd: React.FC<BookingAddProps> = ({ fixedRoomId, fixedRoomName, onB
       } catch (err) {
         console.error("Fehler beim Anlegen der Kundenbuchung:", err);
         setError(extractErrorMessage(err, "Buchung konnte nicht gespeichert werden (Fehler vom Server)."));
+      } finally {
+        setSubmitting(false);
       }
       return;
     }
@@ -88,6 +92,7 @@ const BookingAdd: React.FC<BookingAddProps> = ({ fixedRoomId, fixedRoomName, onB
       return;
     }
 
+    setSubmitting(true);
     try {
       const result = await createBooking({
         roomId,
@@ -108,6 +113,8 @@ const BookingAdd: React.FC<BookingAddProps> = ({ fixedRoomId, fixedRoomName, onB
     } catch (err) {
       console.error("Fehler beim Anlegen der Buchung:", err);
       setError("Buchung konnte nicht gespeichert werden (Fehler vom Server).");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -176,8 +183,8 @@ const BookingAdd: React.FC<BookingAddProps> = ({ fixedRoomId, fixedRoomName, onB
           {error && <Alert variant="danger">{error}</Alert>}
           {success && <Alert variant="success">{success}</Alert>}
 
-          <Button type="submit" className="w-full sm:w-auto justify-self-start">
-            Buchung speichern
+          <Button type="submit" disabled={submitting} className="w-full sm:w-auto justify-self-start">
+            {submitting ? "Speichert..." : "Buchung speichern"}
           </Button>
         </div>
       </form>

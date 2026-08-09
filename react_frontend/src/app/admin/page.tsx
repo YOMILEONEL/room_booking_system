@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { fetchAdminDashboard, type AdminDashboard } from "../api/admin.api";
 import { confirmPayment } from "../api/payment.api";
+import { formatLocalDate } from "../lib/formatDate";
 import { Card, Badge, Button, Alert } from "../components/ui";
 
 const currency = new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" });
@@ -30,6 +31,7 @@ export default function AdminOverviewPage() {
   const [data, setData] = React.useState<AdminDashboard | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [confirmingId, setConfirmingId] = React.useState<string | null>(null);
+  const [paymentError, setPaymentError] = React.useState<string | null>(null);
 
   const loadDashboard = React.useCallback(async () => {
     try {
@@ -47,12 +49,13 @@ export default function AdminOverviewPage() {
 
   const handleConfirmPayment = async (paymentId: string) => {
     setConfirmingId(paymentId);
+    setPaymentError(null);
     try {
       await confirmPayment(paymentId);
       await loadDashboard();
     } catch (err) {
       console.error("Zahlung konnte nicht bestätigt werden:", err);
-      alert("Zahlung konnte nicht bestätigt werden.");
+      setPaymentError("Zahlung konnte nicht bestätigt werden.");
     } finally {
       setConfirmingId(null);
     }
@@ -76,6 +79,7 @@ export default function AdminOverviewPage() {
       </div>
 
       {error && <Alert variant="danger">{error}</Alert>}
+      {paymentError && <Alert variant="danger">{paymentError}</Alert>}
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         {tiles.map((tile) => (
@@ -114,7 +118,7 @@ export default function AdminOverviewPage() {
                       <td className="px-4 py-3">{b.room?.name}</td>
                       <td className="px-4 py-3">{b.user?.email}</td>
                       <td className="px-4 py-3 text-text-secondary">
-                        {b.startTime} – {b.endTime}
+                        {formatLocalDate(b.startTime)} – {formatLocalDate(b.endTime)}
                       </td>
                       <td className="px-4 py-3">
                         {b.payment && (

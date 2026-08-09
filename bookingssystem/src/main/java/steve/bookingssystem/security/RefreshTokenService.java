@@ -6,4 +6,6 @@ public interface RefreshTokenService {
     RefreshToken create(User user);
     RefreshToken validate(String token);
     void revoke(String token);
+    void revokeAllForUser(User user);
+    void deleteExpired();
 }
