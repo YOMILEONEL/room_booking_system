@@ -9,24 +9,24 @@ import { Card, Button, TextInput, Alert } from "../components/ui";
 import { requestPasswordReset } from "../api/auth.api";
 
 const GENERIC_MESSAGE =
-  "Falls dieser Benutzername existiert, wurde ein Link zum Zurücksetzen des Passworts erzeugt.";
+  "Falls diese E-Mail-Adresse existiert, wurde ein Link zum Zurücksetzen des Passworts erzeugt.";
 
 export default function ForgotPasswordPage() {
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!username) return;
+    if (!email) return;
 
     setBusy(true);
     try {
-      await requestPasswordReset(username);
+      await requestPasswordReset(email);
     } catch (err) {
       console.error("Forgot-password error:", err);
     } finally {
-      // Immer dieselbe Meldung - egal ob der Benutzername existiert (Anti-Enumeration).
+      // Immer dieselbe Meldung - egal ob die E-Mail-Adresse existiert (Anti-Enumeration).
       setMessage(GENERIC_MESSAGE);
       setBusy(false);
     }
@@ -39,7 +39,7 @@ export default function ForgotPasswordPage() {
         <Card>
           <h1 className="text-2xl font-bold mb-2">Passwort vergessen</h1>
           <p className="text-sm text-text-secondary mb-6">
-            Gib deinen Benutzernamen ein. Falls das Konto existiert, wird ein
+            Gib deine E-Mail-Adresse ein. Falls das Konto existiert, wird ein
             Reset-Link erzeugt.
           </p>
 
@@ -48,10 +48,11 @@ export default function ForgotPasswordPage() {
           ) : (
             <form onSubmit={handleSubmit} className="grid gap-4">
               <TextInput
-                label="Benutzername"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                autoComplete="username"
+                label="E-Mail"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                autoComplete="email"
               />
               <Button type="submit" disabled={busy} className="w-full">
                 {busy ? "Wird gesendet..." : "Reset-Link anfordern"}

@@ -46,7 +46,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </button>
             <span className="font-semibold">Admin Dashboard</span>
           </div>
-          <span className="text-sm text-text-muted truncate">{session?.user?.name}</span>
+          <span className="text-sm text-text-muted truncate">{session?.user?.email}</span>
         </header>
 
         <main className="px-4 sm:px-6 py-8 max-w-6xl w-full mx-auto">{children}</main>

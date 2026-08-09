@@ -5,7 +5,7 @@ const BASE = "/api";
 export type CustomerType = "ORGANISATION" | "KUNDE";
 
 export type RegisterRequest = {
-  username: string;
+  email: string;
   password: string;
   customerType: CustomerType;
   organisationName?: string;
@@ -22,10 +22,10 @@ export async function registerUser(payload: RegisterRequest): Promise<void> {
   });
 }
 
-export async function requestPasswordReset(username: string): Promise<void> {
+export async function requestPasswordReset(email: string): Promise<void> {
   await apiFetch<void>(`${BASE}/forgot-password`, {
     method: "POST",
-    body: { username },
+    body: { email },
     auth: false,
     responseType: "text",
   });

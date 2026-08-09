@@ -57,7 +57,7 @@ export default function NavBar() {
                 </Link>
               )}
               <span className="hidden sm:inline text-sm text-text-muted px-1">
-                {session.user?.displayName ?? session.user?.name}
+                {session.user?.displayName ?? session.user?.email}
               </span>
               <button
                 onClick={() => setConfirmLogout(true)}

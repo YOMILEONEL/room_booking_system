@@ -15,11 +15,11 @@ export default function ProfilePage() {
   const router = useRouter();
   const userId = session?.user?.id ?? null;
 
-  const [editUsername, setEditUsername] = React.useState(false);
-  const [username, setUsername] = React.useState("");
-  const [usernameError, setUsernameError] = React.useState<string | null>(null);
-  const [usernameSuccess, setUsernameSuccess] = React.useState<string | null>(null);
-  const [savingUsername, setSavingUsername] = React.useState(false);
+  const [editEmail, setEditEmail] = React.useState(false);
+  const [email, setEmail] = React.useState("");
+  const [emailError, setEmailError] = React.useState<string | null>(null);
+  const [emailSuccess, setEmailSuccess] = React.useState<string | null>(null);
+  const [savingEmail, setSavingEmail] = React.useState(false);
 
   const [editPassword, setEditPassword] = React.useState(false);
   const [currentPassword, setCurrentPassword] = React.useState("");
@@ -36,10 +36,10 @@ export default function ProfilePage() {
   }, [status, router]);
 
   React.useEffect(() => {
-    if (session?.user?.name) {
-      setUsername(session.user.name);
+    if (session?.user?.email) {
+      setEmail(session.user.email);
     }
-  }, [session?.user?.name]);
+  }, [session?.user?.email]);
 
   if (status === "loading" || status === "unauthenticated") {
     return (
@@ -49,26 +49,26 @@ export default function ProfilePage() {
     );
   }
 
-  const handleSaveUsername = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSaveEmail = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setUsernameError(null);
-    setUsernameSuccess(null);
+    setEmailError(null);
+    setEmailSuccess(null);
 
-    if (!userId || !username.trim()) {
-      setUsernameError("Bitte einen Benutzernamen angeben.");
+    if (!userId || !email.trim()) {
+      setEmailError("Bitte eine E-Mail-Adresse angeben.");
       return;
     }
 
-    setSavingUsername(true);
+    setSavingEmail(true);
     try {
-      await updateUser(userId, { username: username.trim() });
-      setUsernameSuccess("Benutzername wurde aktualisiert.");
-      setEditUsername(false);
+      await updateUser(userId, { email: email.trim() });
+      setEmailSuccess("E-Mail-Adresse wurde aktualisiert.");
+      setEditEmail(false);
     } catch (err) {
-      console.error("Fehler beim Aktualisieren des Benutzernamens:", err);
-      setUsernameError("Benutzername konnte nicht gespeichert werden.");
+      console.error("Fehler beim Aktualisieren der E-Mail-Adresse:", err);
+      setEmailError(extractErrorMessage(err, "E-Mail-Adresse konnte nicht gespeichert werden."));
     } finally {
-      setSavingUsername(false);
+      setSavingEmail(false);
     }
   };
 
@@ -116,21 +116,21 @@ export default function ProfilePage() {
               <button
                 type="button"
                 onClick={() => {
-                  setUsernameError(null);
-                  setUsernameSuccess(null);
-                  setEditUsername((v) => !v);
+                  setEmailError(null);
+                  setEmailSuccess(null);
+                  setEditEmail((v) => !v);
                 }}
                 className="text-sm font-medium text-primary hover:text-primary-hover transition-colors"
               >
-                {editUsername ? "Abbrechen" : "Daten ändern"}
+                {editEmail ? "Abbrechen" : "Daten ändern"}
               </button>
             </div>
 
-            {!editUsername && (
+            {!editEmail && (
               <div className="grid gap-1.5 text-sm">
                 <p className="text-text-secondary">
-                  <span className="font-semibold text-text-primary">Benutzername:</span>{" "}
-                  {session?.user?.name}
+                  <span className="font-semibold text-text-primary">E-Mail:</span>{" "}
+                  {session?.user?.email}
                 </p>
                 <p className="text-text-secondary">
                   <span className="font-semibold text-text-primary">Rolle:</span>{" "}
@@ -139,23 +139,25 @@ export default function ProfilePage() {
               </div>
             )}
 
-            {editUsername && (
-              <form onSubmit={handleSaveUsername} className="grid gap-4">
+            {editEmail && (
+              <form onSubmit={handleSaveEmail} className="grid gap-4">
                 <TextInput
-                  label="Benutzername"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
+                  label="E-Mail"
+                  type="email"
+                  autoComplete="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                 />
-                {usernameError && <Alert variant="danger">{usernameError}</Alert>}
-                <Button type="submit" disabled={savingUsername} className="justify-self-start">
-                  {savingUsername ? "Speichert..." : "Speichern"}
+                {emailError && <Alert variant="danger">{emailError}</Alert>}
+                <Button type="submit" disabled={savingEmail} className="justify-self-start">
+                  {savingEmail ? "Speichert..." : "Speichern"}
                 </Button>
               </form>
             )}
 
-            {!editUsername && usernameSuccess && (
+            {!editEmail && emailSuccess && (
               <div className="mt-3">
-                <Alert variant="success">{usernameSuccess}</Alert>
+                <Alert variant="success">{emailSuccess}</Alert>
               </div>
             )}
           </Card>

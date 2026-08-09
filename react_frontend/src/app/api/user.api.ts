@@ -5,12 +5,12 @@ const BASE = "/user";
 
 export type User = {
   id: string;
-  username: string;
+  email: string;
   role: Role;
 };
 
 export type UpdateUserRequest = {
-  username?: string;
+  email?: string;
   password?: string;
   currentPassword?: string;
 };

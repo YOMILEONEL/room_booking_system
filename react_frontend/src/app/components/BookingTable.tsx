@@ -143,7 +143,7 @@ const BookingTable: React.FC = () => {
                 <p className="text-sm text-text-secondary">Standort: {room?.location}</p>
                 {isAdmin && (
                   <p className="text-sm text-text-secondary">
-                    Von: {user?.username} ({user?.role})
+                    Von: {user?.email} ({user?.role})
                   </p>
                 )}
                 <p className="text-sm text-text-secondary">

@@ -9,7 +9,7 @@ export type RoomBookingCount = {
 };
 
 export type CustomerBookingCount = {
-  username: string;
+  email: string;
   bookingCount: number;
 };
 

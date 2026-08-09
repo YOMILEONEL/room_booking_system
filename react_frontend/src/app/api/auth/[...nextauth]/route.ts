@@ -51,11 +51,11 @@ const handler = NextAuth({
     CredentialsProvider({
       name: "Credentials",
       credentials: {
-        username: { label: "Username", type: "text" },
+        email: { label: "E-Mail", type: "email" },
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        if (!credentials?.username || !credentials?.password) {
+        if (!credentials?.email || !credentials?.password) {
           return null;
         }
 
@@ -63,7 +63,7 @@ const handler = NextAuth({
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            username: credentials.username,
+            email: credentials.email,
             password: credentials.password,
           }),
         });
@@ -75,14 +75,14 @@ const handler = NextAuth({
 
         const data = await res.json();
 
-        // Erwartete AuthResponse: { id, username, role, accessToken, refreshToken }
+        // Erwartete AuthResponse: { id, email, role, accessToken, refreshToken }
         if (!data || !data.id || !data.accessToken || !data.refreshToken) {
           return null;
         }
 
         return {
           id: String(data.id),
-          name: data.username,
+          email: data.email,
           displayName: data.displayName,
           role: data.role,
           customerType: data.customerType,

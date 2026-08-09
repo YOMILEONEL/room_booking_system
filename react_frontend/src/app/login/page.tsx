@@ -19,7 +19,7 @@ function AuthForm() {
 
   const [mode, setMode] = useState<Mode>(searchParams.get("mode") === "register" ? "register" : "login");
 
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [customerType, setCustomerType] = useState<CustomerType>("KUNDE");
   const [organisationName, setOrganisationName] = useState("");
@@ -39,18 +39,18 @@ function AuthForm() {
     e.preventDefault();
     setError("");
 
-    if (!username || !password) {
-      setError("Bitte Benutzername und Passwort eingeben.");
+    if (!email || !password) {
+      setError("Bitte E-Mail-Adresse und Passwort eingeben.");
       return;
     }
 
     setLoading(true);
-    const result = await signIn("credentials", { username, password, redirect: false });
+    const result = await signIn("credentials", { email, password, redirect: false });
     setLoading(false);
 
     if (result?.error) {
       console.error("Login-Fehler:", result.error);
-      setError("Benutzername oder Passwort falsch!");
+      setError("E-Mail-Adresse oder Passwort falsch!");
       return;
     }
 
@@ -63,7 +63,7 @@ function AuthForm() {
     e.preventDefault();
     setError("");
 
-    if (!username || !password || !phoneNumber.trim()) {
+    if (!email || !password || !phoneNumber.trim()) {
       setError("Bitte alle Felder ausfüllen.");
       return;
     }
@@ -79,7 +79,7 @@ function AuthForm() {
     setLoading(true);
     try {
       await registerUser({
-        username,
+        email,
         password,
         customerType,
         organisationName: customerType === "ORGANISATION" ? organisationName.trim() : undefined,
@@ -89,7 +89,7 @@ function AuthForm() {
       });
 
       // direkt einloggen, damit sofort eine Session existiert
-      const result = await signIn("credentials", { username, password, redirect: false });
+      const result = await signIn("credentials", { email, password, redirect: false });
       if (result?.error) {
         setError("Registrierung erfolgreich, Login fehlgeschlagen. Bitte manuell einloggen.");
         switchMode("login");
@@ -141,10 +141,11 @@ function AuthForm() {
           {mode === "login" ? (
             <form onSubmit={handleLogin} className="grid gap-4">
               <TextInput
-                label="Benutzername"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                autoComplete="username"
+                label="E-Mail"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                autoComplete="email"
               />
               <TextInput
                 label="Passwort"
@@ -169,10 +170,11 @@ function AuthForm() {
           ) : (
             <form onSubmit={handleRegister} className="grid gap-4">
               <TextInput
-                label="Benutzername"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                autoComplete="username"
+                label="E-Mail"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                autoComplete="email"
               />
               <TextInput
                 label="Passwort"

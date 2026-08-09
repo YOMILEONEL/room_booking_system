@@ -71,7 +71,7 @@ export default function AdminOverviewPage() {
   return (
     <div className="grid gap-8">
       <div>
-        <h1 className="text-2xl font-bold">Willkommen, {session?.user?.name}.</h1>
+        <h1 className="text-2xl font-bold">Willkommen, {session?.user?.email}.</h1>
         <p className="text-sm text-text-secondary mt-1">Hier ist der aktuelle Stand von Spacio.</p>
       </div>
 
@@ -112,7 +112,7 @@ export default function AdminOverviewPage() {
                   {data.recentBookings.map((b) => (
                     <tr key={b.bookingId} className="border-b border-border-subtle last:border-0">
                       <td className="px-4 py-3">{b.room?.name}</td>
-                      <td className="px-4 py-3">{b.user?.username}</td>
+                      <td className="px-4 py-3">{b.user?.email}</td>
                       <td className="px-4 py-3 text-text-secondary">
                         {b.startTime} – {b.endTime}
                       </td>
@@ -152,7 +152,7 @@ export default function AdminOverviewPage() {
               >
                 <div className="min-w-0">
                   <p className="font-medium truncate">{b.room?.name}</p>
-                  <p className="text-xs text-text-muted truncate">{b.user?.username}</p>
+                  <p className="text-xs text-text-muted truncate">{b.user?.email}</p>
                 </div>
                 <div className="flex flex-col items-end gap-1.5 shrink-0">
                   {b.payment && (
@@ -203,12 +203,12 @@ export default function AdminOverviewPage() {
             )}
             {data?.topCustomers.map((c, i) => (
               <div
-                key={c.username}
+                key={c.email}
                 className="flex items-center justify-between gap-3 pb-3 border-b border-border-subtle last:border-0 last:pb-0"
               >
                 <span className="truncate">
                   <span className="text-text-muted mr-2">{i + 1}.</span>
-                  {c.username}
+                  {c.email}
                 </span>
                 <Badge variant="info">{c.bookingCount}×</Badge>
               </div>

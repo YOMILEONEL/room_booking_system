@@ -20,7 +20,7 @@ export default function UserTable({ users, onDelete }: UserTableProps) {
           <thead>
             <tr className="border-b border-border-subtle text-left text-text-secondary">
               <th className="px-4 py-3 font-semibold">ID</th>
-              <th className="px-4 py-3 font-semibold">Benutzername</th>
+              <th className="px-4 py-3 font-semibold">E-Mail</th>
               <th className="px-4 py-3 font-semibold">Rolle</th>
               <th className="px-4 py-3 font-semibold text-right">Aktionen</th>
             </tr>
@@ -29,7 +29,7 @@ export default function UserTable({ users, onDelete }: UserTableProps) {
             {users.map((user) => (
               <tr key={user.id} className="border-b border-border-subtle last:border-0 hover:bg-black/[0.02]">
                 <td className="px-4 py-3 text-text-muted">{user.id}</td>
-                <td className="px-4 py-3">{user.username}</td>
+                <td className="px-4 py-3">{user.email}</td>
                 <td className="px-4 py-3">
                   <Badge variant={user.role === "ADMIN" ? "info" : "neutral"}>{user.role}</Badge>
                 </td>
