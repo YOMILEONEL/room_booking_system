@@ -99,8 +99,9 @@ const handler = NextAuth({
 
   // KEIN redirect-Callback hier → weniger URL-Magie, weniger Fehler
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
       if (user) {
+        token.email = user.email;
         token.role = user.role;
         token.customerType = user.customerType;
         token.displayName = user.displayName;
@@ -109,6 +110,20 @@ const handler = NextAuth({
         token.refreshToken = user.refreshToken;
         token.accessTokenExpires = decodeAccessTokenExpiryMs(user.accessToken);
         return token;
+      }
+
+      // Ausgelöst durch useSession().update(...) nach einer Profiländerung. Das Access-Token
+      // trägt die (alte) E-Mail als "sub" - ohne erzwungenen Refresh würde jeder Backend-Call
+      // bis zu ~60 Minuten mit 403 fehlschlagen, obwohl die Änderung schon gespeichert ist
+      // (siehe docs/code-review.md, 6.1). refreshAccessToken holt sich ein frisches Token vom
+      // Backend, das dessen *aktuelle* E-Mail als "sub" trägt (RegistrationLoginController.refresh
+      // liest sie über die User-Relation, nicht über das alte Lookup).
+      if (trigger === "update") {
+        const refreshed = await refreshAccessToken(token);
+        if (typeof session?.email === "string") {
+          refreshed.email = session.email;
+        }
+        return refreshed;
       }
 
       // Ein vorheriger Refresh-Versuch ist bereits fehlgeschlagen (z. B. Refresh-Token
@@ -128,6 +143,11 @@ const handler = NextAuth({
     },
     async session({ session, token }) {
       if (session.user) {
+        // NextAuth seedet session.user.email selbst aus dem *alten*, noch nicht durch den
+        // jwt()-Callback aktualisierten Token - ohne diese Zeile bliebe die E-Mail nach einem
+        // erzwungenen Refresh (trigger: "update", siehe jwt() oben) im UI auf dem alten Stand,
+        // obwohl accessToken/JWT-Subject schon korrekt sind.
+        session.user.email = token.email;
         session.user.role = token.role;
         session.user.customerType = token.customerType;
         session.user.displayName = token.displayName;

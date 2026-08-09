@@ -213,11 +213,21 @@ Payment-Service, AuthorizationService, Refresh-/Reset-Token-Services, zwei Integ
 
 ## 6. Frontend — Korrektheit
 
-### 6.1 E-Mail-Adresse ändern zerschießt die eigene Session — HOCH
-`profile/page.tsx`. Nach dem Ändern der E-Mail-Adresse wird die NextAuth-JWT nicht aktualisiert.
-Das Access-Token trägt weiter die alte E-Mail-Adresse als `sub` — jede folgende Backend-Anfrage
-scheitert mit 403, bis das Token nach ~60 Minuten automatisch erneuert wird. Für den Nutzer wirkt
-die App bis dahin zufällig kaputt.
+### 6.1 E-Mail-Adresse ändern zerschießt die eigene Session — behoben
+`profile/page.tsx` ruft nach einer erfolgreichen `updateUser`-Änderung jetzt
+`useSession().update({ email })` auf. `api/auth/[...nextauth]/route.ts`s `jwt`-Callback
+erkennt `trigger === "update"` und erzwingt einen `refreshAccessToken(...)`-Aufruf, statt die
+noch nicht abgelaufene alte Access-Token-TTL zu respektieren — das neue Token trägt die aktuelle
+E-Mail als `sub`, weil `/api/refresh` sie über die `RefreshToken.user`-Relation (Foreign Key,
+keine Namens-Lookup) aus der DB liest. Zusätzlich musste der `session`-Callback
+`session.user.email = token.email` explizit setzen: NextAuth seedet `session.user.email`
+intern aus dem *alten*, noch nicht durch `jwt()` aktualisierten Token, sonst hätte die Anzeige
+weiter die alte Adresse gezeigt, obwohl Access-Token/JWT-Subject schon korrekt waren.
+
+Live end-to-end verifiziert (curl gegen die laufenden Container, kompletter
+NextAuth-CSRF/Login/Update-Zyklus): E-Mail geändert → alter Access-Token liefert 403 (Bug
+reproduziert) → `update()`-Aufruf → Antwort enthält sowohl die neue `session.user.email` als
+auch einen neuen Access-Token mit der neuen E-Mail als `sub` → neuer Token funktioniert (200).
 
 ### 6.2 Buchungsstatus ist in West-Zeitzonen um einen Tag versetzt — HOCH
 `components/BookingTable.tsx:25-40`. Ein reines Datum (`"2026-08-08"`) wird als UTC-Mitternacht
@@ -280,7 +290,7 @@ der Nutzer sieht gar nichts und weiß nicht, ob das Konto angelegt wurde.
 2. ~~**Transaktionen einführen** (`@Transactional` auf den schreibenden Service-Methoden)~~ — erledigt, behebt 1.4, mindert 1.5/1.6.
 3. ~~**Eindeutigkeit von `email`** auf DB-Ebene erzwingen (1.9)~~ — erledigt, siehe Deploy-Hinweis oben (Duplikate vorher prüfen).
 4. ~~**Passwort-Reset-Token nicht loggen** (2.1)~~ — teilweise erledigt (Default jetzt sicher), volle Lösung braucht echten Mailversand, siehe Hinweis oben.
-5. **Session nach E-Mail-Änderung aktualisieren** (6.1) — betrifft jeden Nutzer, der sein Profil bearbeitet.
+5. ~~**Session nach E-Mail-Änderung aktualisieren** (6.1)~~ — erledigt, live end-to-end verifiziert.
 6. **Zeitzonen-sichere Datumsvergleiche im Frontend** (6.2) statt `new Date(isoString)`.
 7. Rest nach Zeit/Interesse — die Tabellen oben sind vollständig genug, um einzeln priorisiert zu werden.
 

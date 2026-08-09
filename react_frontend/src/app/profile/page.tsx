@@ -11,7 +11,7 @@ import { extractErrorMessage } from "../api/apiClient";
 import { Card, Button, TextInput, Alert } from "../components/ui";
 
 export default function ProfilePage() {
-  const { data: session, status } = useSession();
+  const { data: session, status, update } = useSession();
   const router = useRouter();
   const userId = session?.user?.id ?? null;
 
@@ -61,7 +61,11 @@ export default function ProfilePage() {
 
     setSavingEmail(true);
     try {
-      await updateUser(userId, { email: email.trim() });
+      const trimmedEmail = email.trim();
+      await updateUser(userId, { email: trimmedEmail });
+      // Erzwingt einen frischen Access-Token mit der neuen E-Mail als "sub" - sonst schlägt
+      // jeder Backend-Call mit der alten E-Mail fehl, bis das Token automatisch abläuft.
+      await update({ email: trimmedEmail });
       setEmailSuccess("E-Mail-Adresse wurde aktualisiert.");
       setEditEmail(false);
     } catch (err) {
