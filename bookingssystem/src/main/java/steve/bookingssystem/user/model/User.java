@@ -45,16 +45,17 @@ public class User {
         return new UserDTO(u.id, u.email, u.role, u.customerType, u.organisationName, u.firstName, u.lastName, u.phoneNumber);
     }
 
-    // Friendly name for the UI - organisation name, "Vorname Nachname", or the email as a
-    // fallback (admins have no customerType, and any incomplete profile falls back the same way).
+    // Friendly name for the UI - "Vorname Nachname", organisation name, or the email as a last
+    // resort. Deliberately does NOT require customerType to match: some accounts (older rows
+    // predating this field, or ones created outside the normal /api/register flow) have real
+    // firstName/lastName data but a null customerType - gating on customerType made those show
+    // their email forever with no way to fix it, even though the actual name was right there.
     public String getDisplayName() {
-        if (customerType == CustomerType.ORGANISATION && organisationName != null && !organisationName.isBlank()) {
-            return organisationName;
-        }
-        if (customerType == CustomerType.KUNDE
-                && firstName != null && !firstName.isBlank()
-                && lastName != null && !lastName.isBlank()) {
+        if (firstName != null && !firstName.isBlank() && lastName != null && !lastName.isBlank()) {
             return firstName + " " + lastName;
+        }
+        if (organisationName != null && !organisationName.isBlank()) {
+            return organisationName;
         }
         return email;
     }

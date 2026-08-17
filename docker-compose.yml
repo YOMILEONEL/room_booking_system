@@ -54,6 +54,11 @@ services:
       # Server-side (NextAuth) calls the backend via the Docker service name, not
       # "localhost" - "localhost" inside this container means this container.
       BACKEND_INTERNAL_URL: http://backend:8080
+      # KI-Assistent (Kunde/Organisation, siehe /assistant): kostenloser Gemini-API-Key
+      # aus https://aistudio.google.com/apikey, nur serverseitig genutzt (nie im Browser-
+      # Bundle). Leer lassen deaktiviert den Assistenten kontrolliert (klare Fehlermeldung
+      # statt Absturz), die App startet trotzdem normal.
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
     depends_on:
       - backend
     ports:

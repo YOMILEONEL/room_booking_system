@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { ConfirmDialog } from "./ui";
 import LogoMark from "./LogoMark";
+import BotIcon from "./BotIcon";
 
 export default function NavBar() {
   const router = useRouter();
@@ -48,6 +49,15 @@ export default function NavBar() {
               >
                 Profil
               </Link>
+              {session?.user?.role !== "ADMIN" && (
+                <Link
+                  href="/assistant"
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-black/[0.04] transition-colors"
+                >
+                  <BotIcon className="w-4 h-4" />
+                  KI-Assistent
+                </Link>
+              )}
               {session?.user?.role === "ADMIN" && (
                 <Link
                   href="/admin"

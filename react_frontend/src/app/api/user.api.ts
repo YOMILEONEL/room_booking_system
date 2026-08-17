@@ -3,17 +3,31 @@ import { Role } from "../regist/Role";
 
 const BASE = "/user";
 
+export type CustomerType = "ORGANISATION" | "KUNDE";
+
 export type User = {
   id: string;
   email: string;
   role: Role;
+  customerType?: CustomerType | null;
+  organisationName?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  phoneNumber?: string | null;
 };
 
 export type UpdateUserRequest = {
   email?: string;
   password?: string;
   currentPassword?: string;
+  firstName?: string;
+  lastName?: string;
+  organisationName?: string;
 };
+
+export async function fetchUser(id: string): Promise<User> {
+  return apiFetch<User>(`${BASE}/get/${id}`);
+}
 
 export async function fetchAllUsers(): Promise<User[]> {
   return apiFetch<User[]>(`${BASE}/getAll`);

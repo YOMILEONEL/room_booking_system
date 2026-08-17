@@ -56,6 +56,20 @@ public class UserServiceImpl implements UserService {
             }
             existingUser.setPassword(passwordEncoder.encode(request.password()));
         }
+        // Same partial-update rule as email/password: only overwrite a field the caller
+        // actually sent. Lets an account originally created without these (e.g. a legacy
+        // row from before firstName/lastName existed) fill them in later - getDisplayName()
+        // falls back to the email address whenever they're blank, so this is the only way
+        // for such an account to ever show a real name instead of its email in the UI.
+        if (request.firstName() != null && !request.firstName().isBlank()) {
+            existingUser.setFirstName(request.firstName());
+        }
+        if (request.lastName() != null && !request.lastName().isBlank()) {
+            existingUser.setLastName(request.lastName());
+        }
+        if (request.organisationName() != null && !request.organisationName().isBlank()) {
+            existingUser.setOrganisationName(request.organisationName());
+        }
         userRepository.save(existingUser);
     }
 

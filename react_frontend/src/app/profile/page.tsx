@@ -6,17 +6,43 @@ import { useRouter } from "next/navigation";
 import NavBar from "../components/NavBar";
 import Footer from "../components/Footer";
 import BookingTable from "../components/BookingTable";
-import { updateUser } from "../api/user.api";
+import { fetchUser, updateUser, type User } from "../api/user.api";
 import { extractErrorMessage } from "../api/apiClient";
 import { Card, Button, TextInput, Alert } from "../components/ui";
+
+// Mirrors the backend's User.getDisplayName() (steve.bookingssystem.user.model.User) - used
+// right after a save to refresh the NextAuth session immediately (see update() call below),
+// without waiting for a full page reload / fresh /user/get fetch. Deliberately does NOT check
+// customerType: some accounts have real firstName/lastName but a null customerType (rows
+// predating that field, or created outside /api/register), and gating on it made those show
+// their email forever with no way to fix it even though the name was right there.
+function computeDisplayName(user: {
+  email: string;
+  organisationName?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+}): string {
+  if (user.firstName?.trim() && user.lastName?.trim()) {
+    return `${user.firstName.trim()} ${user.lastName.trim()}`;
+  }
+  if (user.organisationName?.trim()) {
+    return user.organisationName.trim();
+  }
+  return user.email;
+}
 
 export default function ProfilePage() {
   const { data: session, status, update } = useSession();
   const router = useRouter();
   const userId = session?.user?.id ?? null;
 
+  const [userDetails, setUserDetails] = React.useState<User | null>(null);
+
   const [editEmail, setEditEmail] = React.useState(false);
   const [email, setEmail] = React.useState("");
+  const [firstName, setFirstName] = React.useState("");
+  const [lastName, setLastName] = React.useState("");
+  const [organisationName, setOrganisationName] = React.useState("");
   const [emailError, setEmailError] = React.useState<string | null>(null);
   const [emailSuccess, setEmailSuccess] = React.useState<string | null>(null);
   const [savingEmail, setSavingEmail] = React.useState(false);
@@ -41,6 +67,18 @@ export default function ProfilePage() {
     }
   }, [session?.user?.email]);
 
+  React.useEffect(() => {
+    if (!userId) return;
+    fetchUser(userId)
+      .then((u) => {
+        setUserDetails(u);
+        setFirstName(u.firstName ?? "");
+        setLastName(u.lastName ?? "");
+        setOrganisationName(u.organisationName ?? "");
+      })
+      .catch((err) => console.error("Fehler beim Laden der Profildaten:", err));
+  }, [userId]);
+
   if (status === "loading" || status === "unauthenticated") {
     return (
       <div className="flex justify-center mt-24">
@@ -49,28 +87,60 @@ export default function ProfilePage() {
     );
   }
 
+  const isOrganisation = userDetails?.customerType === "ORGANISATION";
+  const currentDisplayName = userDetails ? computeDisplayName(userDetails) : null;
+
   const handleSaveEmail = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setEmailError(null);
     setEmailSuccess(null);
 
-    if (!userId || !email.trim()) {
+    const trimmedEmail = email.trim();
+    const trimmedFirstName = firstName.trim();
+    const trimmedLastName = lastName.trim();
+    const trimmedOrganisationName = organisationName.trim();
+
+    if (!userId || !userDetails || !trimmedEmail) {
       setEmailError("Bitte eine E-Mail-Adresse angeben.");
+      return;
+    }
+    if (isOrganisation && !trimmedOrganisationName) {
+      setEmailError("Bitte einen Organisationsnamen angeben.");
+      return;
+    }
+    if (!isOrganisation && (!trimmedFirstName || !trimmedLastName)) {
+      setEmailError("Bitte Vor- und Nachnamen angeben.");
       return;
     }
 
     setSavingEmail(true);
     try {
-      const trimmedEmail = email.trim();
-      await updateUser(userId, { email: trimmedEmail });
+      await updateUser(userId, {
+        email: trimmedEmail,
+        firstName: isOrganisation ? undefined : trimmedFirstName,
+        lastName: isOrganisation ? undefined : trimmedLastName,
+        organisationName: isOrganisation ? trimmedOrganisationName : undefined,
+      });
+
+      const updatedDetails: User = {
+        ...(userDetails as User),
+        email: trimmedEmail,
+        firstName: isOrganisation ? userDetails?.firstName : trimmedFirstName,
+        lastName: isOrganisation ? userDetails?.lastName : trimmedLastName,
+        organisationName: isOrganisation ? trimmedOrganisationName : userDetails?.organisationName,
+      };
+      setUserDetails(updatedDetails);
+
       // Erzwingt einen frischen Access-Token mit der neuen E-Mail als "sub" - sonst schlägt
       // jeder Backend-Call mit der alten E-Mail fehl, bis das Token automatisch abläuft.
-      await update({ email: trimmedEmail });
-      setEmailSuccess("E-Mail-Adresse wurde aktualisiert.");
+      // displayName wird im selben Aufruf mitgeschickt, sonst zeigt die NavBar bis zum
+      // nächsten Login weiter den alten Namen bzw. die E-Mail-Adresse.
+      await update({ email: trimmedEmail, displayName: computeDisplayName(updatedDetails) });
+      setEmailSuccess("Angaben wurden aktualisiert.");
       setEditEmail(false);
     } catch (err) {
-      console.error("Fehler beim Aktualisieren der E-Mail-Adresse:", err);
-      setEmailError(extractErrorMessage(err, "E-Mail-Adresse konnte nicht gespeichert werden."));
+      console.error("Fehler beim Aktualisieren der Profildaten:", err);
+      setEmailError(extractErrorMessage(err, "Angaben konnten nicht gespeichert werden."));
     } finally {
       setSavingEmail(false);
     }
@@ -133,6 +203,16 @@ export default function ProfilePage() {
             {!editEmail && (
               <div className="grid gap-1.5 text-sm">
                 <p className="text-text-secondary">
+                  <span className="font-semibold text-text-primary">
+                    {isOrganisation ? "Organisation:" : "Name:"}
+                  </span>{" "}
+                  {currentDisplayName === session?.user?.email ? (
+                    <span className="text-text-muted italic">noch nicht angegeben</span>
+                  ) : (
+                    currentDisplayName
+                  )}
+                </p>
+                <p className="text-text-secondary">
                   <span className="font-semibold text-text-primary">E-Mail:</span>{" "}
                   {session?.user?.email}
                 </p>
@@ -145,6 +225,28 @@ export default function ProfilePage() {
 
             {editEmail && (
               <form onSubmit={handleSaveEmail} className="grid gap-4">
+                {isOrganisation ? (
+                  <TextInput
+                    label="Organisationsname"
+                    value={organisationName}
+                    onChange={(e) => setOrganisationName(e.target.value)}
+                  />
+                ) : (
+                  <>
+                    <TextInput
+                      label="Vorname"
+                      autoComplete="given-name"
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                    />
+                    <TextInput
+                      label="Nachname"
+                      autoComplete="family-name"
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                    />
+                  </>
+                )}
                 <TextInput
                   label="E-Mail"
                   type="email"
