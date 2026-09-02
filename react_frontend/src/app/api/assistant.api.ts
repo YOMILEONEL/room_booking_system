@@ -2,7 +2,26 @@
 // that route holds the session server-side via getServerSession and calls Gemini, so no
 // Authorization header is needed here, just the browser's NextAuth session cookie.
 
-export async function askAssistant(question: string): Promise<string> {
+export type AssistantResult =
+  | { type: "text"; text: string }
+  | {
+      type: "pending_booking";
+      roomId: string;
+      roomName: string;
+      startDate: string;
+      endDate: string;
+      pricePerDay: number;
+      discountCode?: string;
+    }
+  | {
+      type: "pending_cancellation";
+      bookingId: string;
+      roomName: string;
+      startDate: string;
+      endDate: string;
+    };
+
+export async function askAssistant(question: string): Promise<AssistantResult> {
   const res = await fetch("/api/assistant", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -15,5 +34,5 @@ export async function askAssistant(question: string): Promise<string> {
     throw new Error(data?.error ?? `${res.status} ${res.statusText}`);
   }
 
-  return data.answer as string;
+  return data as AssistantResult;
 }

@@ -39,7 +39,7 @@ export default function AssistantPage() {
         <div>
           <h1 className="text-xl font-bold">KI-Assistent</h1>
           <p className="text-sm text-text-secondary mt-1">
-            Frag nach deinen Buchungen oder den Räumen — die Antworten kommen live aus deinen echten Daten.
+            Frag nach deinen Buchungen oder den Räumen. Die Antworten kommen live aus deinen echten Daten.
           </p>
         </div>
 

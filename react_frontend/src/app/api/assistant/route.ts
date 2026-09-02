@@ -36,8 +36,8 @@ export async function POST(request: Request) {
   }
 
   try {
-    const answer = await askAssistant(question.trim(), session.accessToken);
-    return NextResponse.json({ answer });
+    const result = await askAssistant(question.trim(), session.accessToken);
+    return NextResponse.json(result);
   } catch (error) {
     if (error instanceof AssistantError) {
       const status = error.code === "app_quota_exceeded" ? 429 : 502;

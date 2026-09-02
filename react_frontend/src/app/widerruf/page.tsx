@@ -11,7 +11,7 @@ export default function WiderrufPage() {
         <h1 className="text-2xl font-bold">Widerrufsbelehrung</h1>
 
         <Alert variant="info">
-          Vorlage — kein rechtsverbindlicher Text. Diese Seite muss vor Veröffentlichung
+          Vorlage, kein rechtsverbindlicher Text. Diese Seite muss vor Veröffentlichung
           zwingend rechtlich geprüft werden (siehe Hinweis unten zu § 312g BGB).
         </Alert>
 
@@ -24,7 +24,7 @@ export default function WiderrufPage() {
               Das gesetzliche Widerrufsrecht für Verbraucher gilt nach § 312g Abs. 2 Nr. 9 BGB
               grundsätzlich <strong>nicht</strong> für Verträge zur Beherbergung zu anderen
               Zwecken als zu Wohnzwecken, wenn der Vertrag einen bestimmten Termin oder Zeitraum
-              vorsieht — was auf datumsgebundene Raumbuchungen typischerweise zutrifft. Ob diese
+              vorsieht, was auf datumsgebundene Raumbuchungen typischerweise zutrifft. Ob diese
               Ausnahme für das konkrete Geschäftsmodell greift, muss [PLATZHALTER: rechtlich
               geprüft werden]. Die folgende Belehrung ist daher nur als generische Vorlage zu
               verstehen und darf nicht ungeprüft veröffentlicht werden.

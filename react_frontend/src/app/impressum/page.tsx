@@ -11,7 +11,7 @@ export default function ImpressumPage() {
         <h1 className="text-2xl font-bold">Impressum</h1>
 
         <Alert variant="info">
-          Vorlage gemäß § 5 TMG / § 18 MStV — kein rechtsverbindlicher Text. Alle mit
+          Vorlage gemäß § 5 TMG / § 18 MStV, kein rechtsverbindlicher Text. Alle mit
           [PLATZHALTER] markierten Angaben müssen vor Veröffentlichung durch die echten
           Unternehmensdaten ersetzt und die Seite von einer rechtskundigen Person geprüft werden.
         </Alert>

@@ -3,6 +3,7 @@ import "server-only";
 import { BACKEND_INTERNAL_URL } from "../../api/http";
 
 export type AssistantBooking = {
+  bookingId: string;
   roomName: string;
   startTime: string;
   endTime: string;
@@ -10,6 +11,7 @@ export type AssistantBooking = {
 };
 
 export type AssistantRoom = {
+  id: string;
   name: string;
   city: string;
   capacity: number;
@@ -35,6 +37,7 @@ async function backendGet<T>(path: string, accessToken: string): Promise<T> {
 // Payment objects - to keep the tool response small and unambiguous for the model.
 export async function fetchMyBookings(accessToken: string): Promise<AssistantBooking[]> {
   type RawBooking = {
+    bookingId: string;
     room: { name: string } | null;
     startTime: string;
     endTime: string;
@@ -42,6 +45,7 @@ export async function fetchMyBookings(accessToken: string): Promise<AssistantBoo
   };
   const bookings = await backendGet<RawBooking[]>("/booking/getAll", accessToken);
   return bookings.map((b) => ({
+    bookingId: b.bookingId,
     roomName: b.room?.name ?? "Unbekannter Raum",
     startTime: b.startTime,
     endTime: b.endTime,
@@ -55,6 +59,7 @@ export async function fetchMyBookings(accessToken: string): Promise<AssistantBoo
 // mid-booking right now but not yet flipped to GEBUCHT by an admin.
 export async function fetchRoomsOverview(accessToken: string): Promise<AssistantRoom[]> {
   type RawRoom = {
+    id: string;
     name: string;
     city: string;
     capacity: number;
@@ -68,6 +73,7 @@ export async function fetchRoomsOverview(accessToken: string): Promise<Assistant
   return rooms
     .filter((r) => r.active !== false)
     .map((r) => ({
+      id: r.id,
       name: r.name,
       city: r.city,
       capacity: r.capacity,

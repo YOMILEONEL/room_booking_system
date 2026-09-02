@@ -11,7 +11,7 @@ export default function DatenschutzPage() {
         <h1 className="text-2xl font-bold">Datenschutzerklärung</h1>
 
         <Alert variant="info">
-          Vorlage auf Basis der DSGVO — kein rechtsverbindlicher Text. Die tatsächliche
+          Vorlage auf Basis der DSGVO, kein rechtsverbindlicher Text. Die tatsächliche
           Datenverarbeitung dieser Anwendung ist bereits eingetragen; alle mit [PLATZHALTER]
           markierten Stellen (Verantwortlicher, Kontakt, ggf. Auftragsverarbeiter-Details) müssen
           vor Veröffentlichung ergänzt und die Seite rechtlich geprüft werden.
@@ -20,7 +20,7 @@ export default function DatenschutzPage() {
         <Card className="grid gap-6 text-sm text-text-secondary">
           <section className="grid gap-1.5">
             <h2 className="text-base font-bold text-text-primary">1. Verantwortlicher</h2>
-            <p>Spacio, [PLATZHALTER: Anschrift, E-Mail — siehe Impressum]</p>
+            <p>Spacio, [PLATZHALTER: Anschrift, E-Mail (siehe Impressum)]</p>
           </section>
 
           <section className="grid gap-1.5">

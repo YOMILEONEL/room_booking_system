@@ -11,7 +11,7 @@ export default function AgbPage() {
         <h1 className="text-2xl font-bold">Allgemeine Geschäftsbedingungen</h1>
 
         <Alert variant="info">
-          Vorlage — kein rechtsverbindlicher Text. Alle mit [PLATZHALTER] markierten Stellen
+          Vorlage, kein rechtsverbindlicher Text. Alle mit [PLATZHALTER] markierten Stellen
           müssen ergänzt und die AGB vor Veröffentlichung rechtlich geprüft werden.
         </Alert>
 

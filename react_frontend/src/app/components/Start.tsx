@@ -90,7 +90,7 @@ export default function Start() {
             Der richtige Raum, wann und wo Sie ihn brauchen
           </h1>
           <p className="text-white/85 text-base sm:text-lg max-w-2xl mx-auto mb-8">
-            Ob privat für eine Feier oder als Unternehmen für regelmäßige Meetings —
+            Ob privat für eine Feier oder als Unternehmen für regelmäßige Meetings,
             ob große Stadt oder kleiner Standort: Spacio zeigt freie Räume in Echtzeit,
             zu fairen Preisen, mit einem Klick reserviert.
           </p>
@@ -118,7 +118,7 @@ export default function Start() {
           </h2>
           <p className="text-text-secondary text-base leading-relaxed">
             Räume suchen dauert normalerweise: anrufen, warten, hoffen, dass noch etwas frei
-            ist. Spacio dreht das um — freie Räume sehen Sie sofort und buchen sie direkt
+            ist. Spacio dreht das um: freie Räume sehen Sie sofort und buchen sie direkt
             selbst, egal ob Sie einmalig einen Raum brauchen oder als Organisation
             regelmäßig planen.
           </p>
@@ -128,7 +128,7 @@ export default function Start() {
           <div className="bg-card border border-border-subtle rounded-2xl p-6">
             <h3 className="font-semibold text-lg mb-2">Für Privatpersonen</h3>
             <p className="text-sm text-text-secondary leading-relaxed">
-              Ob Familienfeier, Workshop oder Lerngruppe — finden Sie den passenden Raum in
+              Ob Familienfeier, Workshop oder Lerngruppe: finden Sie den passenden Raum in
               Ihrer Nähe, ganz ohne Anruf oder Wartezeit, und buchen Sie ihn direkt zum
               angezeigten Preis.
             </p>
@@ -141,7 +141,7 @@ export default function Start() {
             <p className="text-sm text-text-secondary leading-relaxed">
               Ob großes Unternehmen in der Metropole oder kleines Team in der Kreisstadt:
               Als registrierte Organisation buchen Sie Besprechungs- und Schulungsräume zum
-              Vorzugspreis — 10 % Rabatt automatisch auf jede Buchung, ganz ohne Verhandlung.
+              Vorzugspreis: 10 % Rabatt automatisch auf jede Buchung, ganz ohne Verhandlung.
             </p>
           </div>
         </div>
