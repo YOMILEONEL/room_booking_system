@@ -1,19 +1,17 @@
 import "server-only";
 
-import {
-  GoogleGenerativeAI,
-  GoogleGenerativeAIFetchError,
-  SchemaType,
-  type Content,
-  type FunctionDeclaration,
-} from "@google/generative-ai";
+import OpenAI, { APIError } from "openai";
+import type { ChatCompletionMessageParam, ChatCompletionTool } from "openai/resources/chat/completions";
 import { fetchMyBookings, fetchRoomsOverview } from "./tools";
 
-// "gemini-flash-latest" is Google's maintained alias, not a dated model name like
-// "gemini-2.5-flash" - the CVio project (docs/ai-agent.md there) hit exactly this problem:
-// a pinned dated name got silently cut off from new API keys. The alias moves that risk to
-// Google instead of breaking this feature on every model rotation.
-const MODEL_NAME = "gemini-flash-latest";
+// gpt-5-nano is OpenAI's cheapest chat model (as of 2026-09: $0.05 / 1M input tokens,
+// $0.40 / 1M output tokens) - plenty for this tool-calling assistant, which mostly relays
+// short, structured data rather than doing heavy reasoning.
+const MODEL_NAME = "gpt-5-nano";
+
+// Every request gets an explicit timeout: a stalled upstream connection previously hung this
+// feature for 5+ minutes with no error and no way for the UI to recover (see docs/ai-agent.md).
+const REQUEST_TIMEOUT_MS = 20_000;
 
 export type AssistantErrorCode =
   | "missing_api_key"
@@ -39,55 +37,67 @@ export class AssistantError extends Error {
 // create_booking/cancel_booking are different in kind, not just in name: they don't return data
 // for the model to keep reasoning with, they END the tool-calling loop (see the "terminal"
 // branch in executeTool/askAssistant below) and hand a proposed action back to the UI. The
-// actual mutation only happens if the person explicitly confirms it there - Gemini never gets
-// to actually create or cancel a booking on its own.
-const toolDeclarations: FunctionDeclaration[] = [
+// actual mutation only happens if the person explicitly confirms it there - the model never
+// gets to actually create or cancel a booking on its own.
+const tools: ChatCompletionTool[] = [
   {
-    name: "get_my_bookings",
-    description:
-      "Liefert alle Buchungen der aktuell angemeldeten Person (Kunde oder Organisation): " +
-      "Anzahl und Details je Buchung (bookingId, Raumname, Zeitraum, Zahlungsstatus). Nutze " +
-      "dieses Tool auch, um vor einer Stornierung die passende bookingId zu ermitteln.",
-    parameters: { type: SchemaType.OBJECT, properties: {} },
-  },
-  {
-    name: "list_rooms",
-    description:
-      "Liefert alle aktiven Räume mit Preis pro Tag (inkl. eines eventuellen " +
-      "Organisationsrabatts der anfragenden Person), Stadt, Kapazität und ob der Raum " +
-      "aktuell verfügbar ist (nicht durch eine laufende Buchung belegt).",
-    parameters: { type: SchemaType.OBJECT, properties: {} },
-  },
-  {
-    name: "create_booking",
-    description:
-      "Bereitet eine neue Buchung vor. Erstellt NOCH KEINE echte Buchung - die Person muss den " +
-      "Vorschlag danach in der Oberfläche noch bestätigen. Rufe dieses Tool erst auf, wenn " +
-      "Raumname und Zeitraum aus dem Gespräch eindeutig hervorgehen (nutze list_rooms, um den " +
-      "exakten Raumnamen zu bestätigen, falls unsicher).",
-    parameters: {
-      type: SchemaType.OBJECT,
-      properties: {
-        roomName: { type: SchemaType.STRING, description: "Exakter Raumname, wie von list_rooms geliefert." },
-        startDate: { type: SchemaType.STRING, description: "Startdatum im Format JJJJ-MM-TT." },
-        endDate: { type: SchemaType.STRING, description: "Enddatum im Format JJJJ-MM-TT." },
-        discountCode: { type: SchemaType.STRING, description: "Optionaler Rabattcode, falls genannt." },
-      },
-      required: ["roomName", "startDate", "endDate"],
+    type: "function",
+    function: {
+      name: "get_my_bookings",
+      description:
+        "Liefert alle Buchungen der aktuell angemeldeten Person (Kunde oder Organisation): " +
+        "Anzahl und Details je Buchung (bookingId, Raumname, Zeitraum, Zahlungsstatus). Nutze " +
+        "dieses Tool auch, um vor einer Stornierung die passende bookingId zu ermitteln.",
+      parameters: { type: "object", properties: {} },
     },
   },
   {
-    name: "cancel_booking",
-    description:
-      "Bereitet die Stornierung einer bestehenden Buchung vor. Storniert NOCH NICHTS - die " +
-      "Person muss das danach in der Oberfläche noch bestätigen. Ermittle die bookingId vorher " +
-      "über get_my_bookings, niemals raten.",
-    parameters: {
-      type: SchemaType.OBJECT,
-      properties: {
-        bookingId: { type: SchemaType.STRING, description: "Die bookingId aus get_my_bookings." },
+    type: "function",
+    function: {
+      name: "list_rooms",
+      description:
+        "Liefert alle aktiven Räume mit Preis pro Tag (inkl. eines eventuellen " +
+        "Organisationsrabatts der anfragenden Person), Stadt, Kapazität und ob der Raum " +
+        "aktuell verfügbar ist (nicht durch eine laufende Buchung belegt).",
+      parameters: { type: "object", properties: {} },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "create_booking",
+      description:
+        "Bereitet eine neue Buchung vor. Erstellt NOCH KEINE echte Buchung - die Person muss den " +
+        "Vorschlag danach in der Oberfläche noch bestätigen. Rufe dieses Tool erst auf, wenn " +
+        "Raumname und Zeitraum aus dem Gespräch eindeutig hervorgehen (nutze list_rooms, um den " +
+        "exakten Raumnamen zu bestätigen, falls unsicher).",
+      parameters: {
+        type: "object",
+        properties: {
+          roomName: { type: "string", description: "Exakter Raumname, wie von list_rooms geliefert." },
+          startDate: { type: "string", description: "Startdatum im Format JJJJ-MM-TT." },
+          endDate: { type: "string", description: "Enddatum im Format JJJJ-MM-TT." },
+          discountCode: { type: "string", description: "Optionaler Rabattcode, falls genannt." },
+        },
+        required: ["roomName", "startDate", "endDate"],
       },
-      required: ["bookingId"],
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "cancel_booking",
+      description:
+        "Bereitet die Stornierung einer bestehenden Buchung vor. Storniert NOCH NICHTS - die " +
+        "Person muss das danach in der Oberfläche noch bestätigen. Ermittle die bookingId vorher " +
+        "über get_my_bookings, niemals raten.",
+      parameters: {
+        type: "object",
+        properties: {
+          bookingId: { type: "string", description: "Die bookingId aus get_my_bookings." },
+        },
+        required: ["bookingId"],
+      },
     },
   },
 ];
@@ -191,15 +201,23 @@ const SYSTEM_INSTRUCTION =
   "Buchungszahlen, Raumnamen oder Preise. Bevor du create_booking oder cancel_booking aufrufst, " +
   "fasse kurz zusammen, was du vorschlägst - die endgültige Bestätigung holt sich die Oberfläche " +
   "danach separat von der Person ein, du musst nicht selbst nochmal nachfragen. Antworte kurz, " +
-  "konkret und auf Deutsch. Preise sind in Euro pro Tag.";
+  "konkret und auf Deutsch. Preise sind in Euro pro Tag.\n\n" +
+  "Formatierung der Antworten: Schreib in normalen, kurzen Sätzen oder als einfache Aufzählung " +
+  "mit '-', nie mit '|' getrennt und nie als rohe Tabelle. Nenne bei Buchungen Raum, Zeitraum " +
+  "und Zahlungsstatus in Worten (z. B. 'Hochzeit-Raum, 08.08. bis 10.08., bezahlt') - die " +
+  "technische bookingId (die lange Zeichenfolge mit Bindestrichen) NIE in der Antwort zeigen, " +
+  "sie ist nur intern für dich zum Zuordnen bei einer Stornierung gedacht. Wenn mehrere " +
+  "Buchungen zur gleichen Beschreibung passen (z. B. gleicher Raum, unterschiedliche Termine), " +
+  "unterscheide sie über den Zeitraum, nicht über eine ID. Keine Markdown-Formatierung " +
+  "(kein **fett**, keine #Überschriften).";
 
 // Runs the model, and if it asks for a tool call, executes it (server-side, scoped to the
 // caller's own accessToken) and feeds the result back - up to a few rounds, in case the model
 // chains two tool calls (e.g. bookings, then rooms) before it has enough to answer. A
 // create_booking/cancel_booking call short-circuits this immediately (see the "terminal" branch
-// below) instead of looping further - Gemini's role stops at proposing the action.
+// below) instead of looping further - the model's role stops at proposing the action.
 export async function askAssistant(question: string, accessToken: string): Promise<AssistantResult> {
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
     throw new AssistantError(
       "Der KI-Assistent ist auf diesem Server nicht konfiguriert.",
@@ -207,67 +225,75 @@ export async function askAssistant(question: string, accessToken: string): Promi
     );
   }
 
-  const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({
-    model: MODEL_NAME,
-    systemInstruction: SYSTEM_INSTRUCTION,
-    tools: [{ functionDeclarations: toolDeclarations }],
-  });
+  const client = new OpenAI({ apiKey, timeout: REQUEST_TIMEOUT_MS, maxRetries: 1 });
 
-  // Built and driven manually via generateContent(), not model.startChat()/sendMessage():
-  // the SDK's ChatSession hardcodes role "function" for a functionResponse turn (see
-  // node_modules/@google/generative-ai/dist/index.js, formatNewContent), but the Gemini API
-  // backend currently in service rejects that with "400 Role 'function' is not supported" -
-  // it now expects the function response back as a "user" turn instead (confirmed live against
-  // the real API). Managing `contents` by hand sidesteps the SDK's fixed role choice.
-  const contents: Content[] = [{ role: "user", parts: [{ text: question }] }];
+  const messages: ChatCompletionMessageParam[] = [
+    { role: "system", content: SYSTEM_INSTRUCTION },
+    { role: "user", content: question },
+  ];
 
   try {
-    let result = await model.generateContent({ contents });
+    let response = await client.chat.completions.create({
+      model: MODEL_NAME,
+      messages,
+      tools,
+    });
 
     for (let round = 0; round < 3; round++) {
-      const calls = result.response.functionCalls();
-      if (!calls || calls.length === 0) {
+      const choice = response.choices[0];
+      const toolCalls = choice.message.tool_calls;
+      if (!toolCalls || toolCalls.length === 0) {
         break;
       }
 
+      messages.push(choice.message);
+
+      // Only "function" tools are declared above, so any "custom" tool call would be a
+      // model error - narrow it away rather than crashing on a missing `.function` field.
+      const functionCalls = toolCalls.filter((toolCall) => toolCall.type === "function");
+
       const executions = await Promise.all(
-        calls.map(async (call) => ({
-          call,
-          execution: await executeTool(call.name, (call.args ?? {}) as Record<string, unknown>, accessToken),
+        functionCalls.map(async (toolCall) => ({
+          toolCall,
+          execution: await executeTool(
+            toolCall.function.name,
+            JSON.parse(toolCall.function.arguments || "{}") as Record<string, unknown>,
+            accessToken
+          ),
         }))
       );
 
-      // create_booking/cancel_booking end the loop right here - the model never sees a
-      // functionResponse for these, because there's nothing further for it to reason about
-      // until the person has actually confirmed the action in the UI.
+      // create_booking/cancel_booking end the loop right here - the model never sees a tool
+      // result for these, because there's nothing further for it to reason about until the
+      // person has actually confirmed the action in the UI.
       const terminal = executions.find((e) => e.execution.kind === "terminal");
       if (terminal && terminal.execution.kind === "terminal") {
         return terminal.execution.result;
       }
 
-      const modelParts = result.response.candidates?.[0]?.content?.parts;
-      contents.push({ role: "model", parts: modelParts ?? [] });
+      for (const { toolCall, execution } of executions) {
+        messages.push({
+          role: "tool",
+          tool_call_id: toolCall.id,
+          content: JSON.stringify(execution.kind === "data" ? execution.data : {}),
+        });
+      }
 
-      const functionResponseParts = executions.map(({ call, execution }) => ({
-        functionResponse: {
-          name: call.name,
-          response: execution.kind === "data" ? execution.data : {},
-        },
-      }));
-      contents.push({ role: "user", parts: functionResponseParts });
-
-      result = await model.generateContent({ contents });
+      response = await client.chat.completions.create({
+        model: MODEL_NAME,
+        messages,
+        tools,
+      });
     }
 
-    return { type: "text", text: result.response.text() };
+    return { type: "text", text: response.choices[0].message.content ?? "" };
   } catch (error) {
-    console.error("[assistant] Gemini-Anfrage fehlgeschlagen:", error);
+    console.error("[assistant] OpenAI-Anfrage fehlgeschlagen:", error);
 
-    if (error instanceof GoogleGenerativeAIFetchError) {
+    if (error instanceof APIError) {
       if (error.status === 429) {
         throw new AssistantError(
-          "Das kostenlose Tageskontingent des KI-Assistenten ist aufgebraucht. Bitte später erneut versuchen.",
+          "Das Guthaben oder Tageskontingent des KI-Assistenten ist aufgebraucht. Bitte später erneut versuchen.",
           "app_quota_exceeded",
           { cause: error }
         );

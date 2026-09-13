@@ -4,18 +4,20 @@ import * as React from "react";
 import { useSession } from "next-auth/react";
 import { askAssistant, type AssistantResult } from "../api/assistant.api";
 import { createBooking, deleteBooking } from "../api/booking.api";
+import { fetchAssistantHistory, logAssistantMessage } from "../api/assistantHistory.api";
 import { extractErrorMessage } from "../api/apiClient";
 import { formatLocalDate } from "../lib/formatDate";
 import { Button, TextInput, Alert } from "./ui";
 import MarkdownLite from "./MarkdownLite";
 
 const currency = new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" });
+const timeFormat = new Intl.DateTimeFormat("de-DE", { dateStyle: "short", timeStyle: "short" });
 
 type ActionStatus = "pending" | "processing" | "confirmed" | "declined" | "error";
 
 type ChatMessage =
-  | { id: string; role: "user"; kind: "text"; text: string }
-  | { id: string; role: "assistant"; kind: "text"; text: string }
+  | { id: string; role: "user"; kind: "text"; text: string; createdAt?: string }
+  | { id: string; role: "assistant"; kind: "text"; text: string; createdAt?: string }
   | {
       id: string;
       role: "assistant";
@@ -85,10 +87,38 @@ export default function AssistantChat({ compact = false }: { compact?: boolean }
   const userId = session?.user?.id ?? null;
 
   const [messages, setMessages] = React.useState<ChatMessage[]>([]);
+  const [historyLoaded, setHistoryLoaded] = React.useState(false);
   const [question, setQuestion] = React.useState("");
   const [sending, setSending] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const scrollRef = React.useRef<HTMLDivElement>(null);
+
+  // Past conversations are saved server-side (assistant_messages table) so a reload or a
+  // revisit doesn't lose them - loaded once as plain read-only text bubbles (a historical
+  // pending_booking/pending_cancellation is stored as its already-resolved summary text, not as
+  // an interactive proposal again).
+  React.useEffect(() => {
+    if (!userId) return;
+    let cancelled = false;
+    fetchAssistantHistory()
+      .then((entries) => {
+        if (cancelled) return;
+        setMessages(
+          entries.map((e) => ({
+            id: e.id,
+            role: e.role === "USER" ? "user" : "assistant",
+            kind: "text",
+            text: e.content,
+            createdAt: e.createdAt,
+          }))
+        );
+      })
+      .catch((err) => console.error("Verlauf konnte nicht geladen werden:", err))
+      .finally(() => setHistoryLoaded(true));
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
 
   React.useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -138,13 +168,12 @@ export default function AssistantChat({ compact = false }: { compact?: boolean }
         discountCode: msg.discountCode,
       });
       const amount = booking.payment?.amount;
-      updateMessage(msg.id, {
-        status: "confirmed",
-        resultText:
-          amount !== undefined
-            ? `Gebucht: ${msg.roomName}, ${formatLocalDate(msg.startDate)} – ${formatLocalDate(msg.endDate)}. Preis: ${currency.format(amount)}`
-            : `Gebucht: ${msg.roomName}, ${formatLocalDate(msg.startDate)} – ${formatLocalDate(msg.endDate)}.`,
-      });
+      const resultText =
+        amount !== undefined
+          ? `Gebucht: ${msg.roomName}, ${formatLocalDate(msg.startDate)} – ${formatLocalDate(msg.endDate)}. Preis: ${currency.format(amount)}`
+          : `Gebucht: ${msg.roomName}, ${formatLocalDate(msg.startDate)} – ${formatLocalDate(msg.endDate)}.`;
+      updateMessage(msg.id, { status: "confirmed", resultText });
+      logAssistantMessage(resultText).catch((err) => console.error("Verlauf konnte nicht gespeichert werden:", err));
     } catch (err) {
       console.error("Fehler beim Anlegen der Buchung:", err);
       updateMessage(msg.id, { status: "error", resultText: extractErrorMessage(err, "Buchung fehlgeschlagen.") });
@@ -155,10 +184,9 @@ export default function AssistantChat({ compact = false }: { compact?: boolean }
     updateMessage(msg.id, { status: "processing" });
     try {
       await deleteBooking(msg.bookingId);
-      updateMessage(msg.id, {
-        status: "confirmed",
-        resultText: `Storniert: ${msg.roomName}, ${formatLocalDate(msg.startDate)} – ${formatLocalDate(msg.endDate)}.`,
-      });
+      const resultText = `Storniert: ${msg.roomName}, ${formatLocalDate(msg.startDate)} – ${formatLocalDate(msg.endDate)}.`;
+      updateMessage(msg.id, { status: "confirmed", resultText });
+      logAssistantMessage(resultText).catch((err) => console.error("Verlauf konnte nicht gespeichert werden:", err));
     } catch (err) {
       console.error("Fehler beim Stornieren der Buchung:", err);
       updateMessage(msg.id, { status: "error", resultText: extractErrorMessage(err, "Stornierung fehlgeschlagen.") });
@@ -168,7 +196,7 @@ export default function AssistantChat({ compact = false }: { compact?: boolean }
   return (
     <div className={`flex flex-col ${compact ? "h-full" : "h-[60vh]"}`}>
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 grid gap-3 content-start">
-        {messages.length === 0 && (
+        {messages.length === 0 && historyLoaded && (
           <div className="grid gap-2">
             <p className="text-sm text-text-muted">Ein paar Beispiele zum Ausprobieren:</p>
             <div className="flex flex-wrap gap-2">
@@ -189,15 +217,17 @@ export default function AssistantChat({ compact = false }: { compact?: boolean }
         {messages.map((m) => {
           if (m.kind === "text") {
             return (
-              <div
-                key={m.id}
-                className={`max-w-[85%] px-3.5 py-2.5 rounded-2xl text-sm ${
-                  m.role === "user"
-                    ? "self-end bg-primary text-white rounded-br-sm"
-                    : "self-start bg-black/[0.04] text-text-primary rounded-bl-sm"
-                }`}
-              >
-                {m.role === "assistant" ? <MarkdownLite text={m.text} /> : m.text}
+              <div key={m.id} className={`max-w-[85%] grid gap-1 ${m.role === "user" ? "self-end justify-items-end" : "self-start justify-items-start"}`}>
+                <div
+                  className={`px-3.5 py-2.5 rounded-2xl text-sm ${
+                    m.role === "user"
+                      ? "bg-primary text-white rounded-br-sm"
+                      : "bg-black/[0.04] text-text-primary rounded-bl-sm"
+                  }`}
+                >
+                  {m.role === "assistant" ? <MarkdownLite text={m.text} /> : m.text}
+                </div>
+                {m.createdAt && <span className="text-[11px] text-text-muted px-1">{timeFormat.format(new Date(m.createdAt))}</span>}
               </div>
             );
           }

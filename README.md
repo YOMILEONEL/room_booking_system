@@ -13,11 +13,12 @@ eine REST-API kommunizieren und gemeinsam per Docker Compose betrieben werden.
 
 | Bereich | Technologien |
 |---|---|
-| Backend | Java 23, Spring Boot 3.4, Spring Security (JWT), Spring Data JPA/Hibernate, Lombok |
+| Backend | Java 23, Spring Boot 3.5, Spring Security (JWT), Spring Data JPA/Hibernate, Lombok |
 | Datenbank | PostgreSQL (Supabase-gehostet) |
 | Dateispeicher | Supabase Storage (S3-kompatibel, AWS SDK v2) für Raumfotos |
 | PDF-Erzeugung | OpenPDF (Rechnungen) |
-| Frontend | Next.js 15 (App Router), React 19, TypeScript, Tailwind CSS v3, NextAuth |
+| Frontend | Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS v3, NextAuth |
+| KI-Assistent | OpenAI API (`gpt-5-nano`), Function Calling |
 | Infrastruktur | Docker Compose (Backend- + Frontend-Container), GitHub Actions CI |
 
 ## Funktionsumfang
@@ -41,6 +42,11 @@ eine REST-API kommunizieren und gemeinsam per Docker Compose betrieben werden.
 - **Admin-Dashboard**: Kennzahlen (verfügbare/belegte Räume, Nutzerzahl, Umsatz), offene
   Zahlungen, meistgebuchte Räume, aktivste Kunden — vollständig responsive inkl.
   Off-Canvas-Sidebar auf Mobilgeräten.
+- **KI-Assistent** (`/assistant`, nur Kunden/Organisationen): Chat über die eigenen Buchungen und
+  verfügbaren Räume, kann Buchungen vorschlagen und stornieren (echte Mutation erst nach
+  expliziter Bestätigung in der Oberfläche). Der komplette Gesprächsverlauf wird in der Datenbank
+  gespeichert, damit er über einen Reload hinaus einsehbar bleibt. Details in
+  [`docs/ai-agent.md`](docs/ai-agent.md).
 
 ## Projektstruktur
 
@@ -71,6 +77,9 @@ Voraussetzung: Docker Desktop, ein Supabase-Projekt (Postgres-Datenbank; Storage
    - `NEXTAUTH_SECRET` — langer, zufälliger String
    - `NEXTAUTH_URL=http://localhost:3000`
    - `NEXT_PUBLIC_BACKEND_URL=http://localhost:8080`
+   - optional `OPENAI_API_KEY` für den KI-Assistenten (`/assistant`, mit aufgeladenem Guthaben ab
+     [platform.openai.com/api-keys](https://platform.openai.com/api-keys)) — leer lassen
+     deaktiviert den Assistenten kontrolliert, der Rest der App läuft trotzdem normal.
 
 3. **Starten**:
    ```bash

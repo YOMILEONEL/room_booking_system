@@ -31,6 +31,23 @@ async function backendGet<T>(path: string, accessToken: string): Promise<T> {
   return (await res.json()) as T;
 }
 
+export type AssistantMessageLogEntry = { role: "USER" | "ASSISTANT"; content: string };
+
+// Persists a question/reply pair to the DB (assistant_messages table) so the person can look
+// back at what they asked and proposed/did with the assistant, and when. Best-effort: a logging
+// failure must never break the actual chat reply the person is waiting for, so callers should
+// not await this inline without a catch (see api/assistant/route.ts).
+export async function logAssistantMessages(entries: AssistantMessageLogEntry[], accessToken: string): Promise<void> {
+  const res = await fetch(`${BACKEND_INTERNAL_URL}/assistant/history`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+    body: JSON.stringify(entries),
+  });
+  if (!res.ok) {
+    throw new Error(`Backend-Aufruf /assistant/history schlug fehl: ${res.status}`);
+  }
+}
+
 // Same endpoint the "Meine Buchungen" page already uses (GET /booking/getAll) - the backend
 // scopes it to the caller's own bookings for a MEMBER token, so no extra userId filtering is
 // needed here. Only lean, chat-relevant fields are extracted - not the raw nested Room/User/

@@ -7,7 +7,7 @@ services:
   backend:
     build: ./bookingssystem
     container_name: booking-backend
-    restart: unless-stopped
+    restart: "no"
     env_file:
       - ./bookingssystem/.env
     environment:
@@ -47,18 +47,19 @@ services:
       args:
         NEXT_PUBLIC_BACKEND_URL: ${NEXT_PUBLIC_BACKEND_URL:-http://localhost:8080}
     container_name: booking-frontend
-    restart: unless-stopped
+    restart: "no"
     environment:
       NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:?set NEXTAUTH_SECRET in .env}
       # Server-side (NextAuth) calls the backend via the Docker service name, not
       # "localhost" - "localhost" inside this container means this container.
       BACKEND_INTERNAL_URL: http://backend:8080
-      # KI-Assistent (Kunde/Organisation, siehe /assistant): kostenloser Gemini-API-Key
-      # aus https://aistudio.google.com/apikey, nur serverseitig genutzt (nie im Browser-
-      # Bundle). Leer lassen deaktiviert den Assistenten kontrolliert (klare Fehlermeldung
-      # statt Absturz), die App startet trotzdem normal.
-      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      # KI-Assistent (Kunde/Organisation, siehe /assistant): OpenAI-API-Key aus
+      # https://platform.openai.com/api-keys (benötigt aufgeladenes Guthaben), nur
+      # serverseitig genutzt (nie im Browser-Bundle). Leer lassen deaktiviert den
+      # Assistenten kontrolliert (klare Fehlermeldung statt Absturz), die App startet
+      # trotzdem normal.
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
     depends_on:
       - backend
     ports:

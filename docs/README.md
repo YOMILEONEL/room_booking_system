@@ -3,7 +3,8 @@
 Technischer Überblick über Architektur, Datenmodell, API und Geschäftsregeln von Spacio.
 Für Setup/Quickstart siehe die [Root-README](../README.md). Für formale
 Anforderungen siehe [`requirements-engineering.md`](requirements-engineering.md), für den
-vollständigen Code-Review siehe [`code-review.md`](code-review.md).
+vollständigen Code-Review siehe [`code-review.md`](code-review.md), für den KI-Assistenten siehe
+[`ai-agent.md`](ai-agent.md).
 
 ## Architektur
 
@@ -56,6 +57,7 @@ den Kunden-Buchungs-Endpunkt mit einer Kunden-E-Mail.
 | `Invoice` | invoiceNumber, customerEmailSnapshot, roomNameSnapshot, amount, invoiceDate | 1–1 Payment |
 | `DiscountCode` | code, type (PERCENT/ABSOLUTE), value, validFrom, validUntil, active | keine (nur als String in `Payment.appliedDiscountCode` referenziert) |
 | `RefreshToken`, `PasswordResetToken` | token, expiresAt, revoked/used | n–1 User |
+| `AssistantMessage` | role (USER/ASSISTANT), content, createdAt | n–1 User |
 
 Alle IDs sind UUIDs. Geldbeträge sind `DECIMAL(10,2)`. Enums werden konsequent als String
 persistiert (`@Enumerated(EnumType.STRING)`).
@@ -96,6 +98,7 @@ Alle Endpunkte außer `/api/register`, `/api/login`, `/api/refresh`, `/api/logou
 | Rechnungen | `/invoice/*` | Besitzer/Admin (JSON + PDF-Download) |
 | Rabattcodes | `/discount-code` | nur Admin |
 | Admin-Dashboard | `/admin/dashboard` | nur Admin |
+| KI-Assistent-Verlauf | `/assistant/history` | eigener Verlauf (Kunde/Organisation) |
 
 Vollständige Endpunktliste mit HTTP-Methoden und exakten Berechtigungsregeln:
 [`code-review.md`](code-review.md) Abschnitt "REST-Endpunkte".
