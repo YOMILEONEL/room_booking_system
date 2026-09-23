@@ -1,46 +1,20 @@
 services:
-  # No mysql/postgres service here on purpose: the backend connects to a remote
-  # Supabase (hosted Postgres) database instead of a local/containerized one -
-  # see backend.environment below. SPRING_DATASOURCE_PASSWORD comes from
-  # bookingssystem/.env (not committed).
+
 
   backend:
     build: ./bookingssystem
     container_name: booking-backend
     restart: "no"
+  
     env_file:
       - ./bookingssystem/.env
     environment:
-      # Use the "Session pooler" connection string from Supabase (Project Settings
-      # -> Database -> Connection string -> JDBC), NOT "Direct connection" (that
-      # one is IPv6-only and usually unreachable from Docker Desktop on Windows)
-      # and NOT "Transaction pooler" (port 6543 - doesn't support the prepared
-      # statements Hibernate relies on). Fill in your project's actual host/user.
-      SPRING_DATASOURCE_URL: jdbc:postgresql://aws-1-eu-west-1.pooler.supabase.com:5432/postgres?sslmode=require
-      SPRING_DATASOURCE_USERNAME: postgres.fvfbnxgkzbynownyywtd
-      # Fresh Supabase database, never baselined for Flyway: let Hibernate
-      # reconcile the schema directly instead, same approach used for the
-      # earlier local-MySQL setup.
+      
       SPRING_FLYWAY_ENABLED: "false"
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
-      # Room photo uploads (Supabase Storage, S3-compatible). Optional - the app runs fine
-      # without these, only room image upload needs them. Endpoint/region come from Supabase
-      # dashboard: Project Settings -> Storage -> S3 Connection. Bucket must be created there
-      # first (Storage -> New bucket), marked Public. Access key/secret go in
-      # bookingssystem/.env, not here.
-      SUPABASE_URL: https://fvfbnxgkzbynownyywtd.supabase.co
-      SUPABASE_S3_ENDPOINT: https://fvfbnxgkzbynownyywtd.supabase.co/storage/v1/s3
-      SUPABASE_S3_REGION: eu-west-1
-      SUPABASE_S3_BUCKET: room-images
-      # TEMPORARY: no email sending is configured (see StorageService-style TODO), so this
-      # logs the raw password-reset token as a stand-in for actually mailing it - anyone with
-      # access to `docker logs booking-backend` can read it and take over the account it was
-      # requested for within the 30-minute validity window. Remove this once real email
-      # delivery exists (docs/code-review.md, 2.1). Defaults to "false" if unset.
+      
       APP_LOG_PASSWORD_RESET_TOKENS: "true"
-      # Monitoring (optional, see the "monitoring" profile below and docs/monitoring.md): where
-      # logback-spring.xml's Loki appender pushes logs to. Loki being unreachable (e.g. running
-      # without --profile monitoring) doesn't block startup or break logging.
+      
       LOKI_URL: ${LOKI_URL:-http://loki:3100/loki/api/v1/push}
     ports:
       - "8080:8080"
@@ -55,27 +29,15 @@ services:
     environment:
       NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:?set NEXTAUTH_SECRET in .env}
-      # Server-side (NextAuth) calls the backend via the Docker service name, not
-      # "localhost" - "localhost" inside this container means this container.
+      
       BACKEND_INTERNAL_URL: http://backend:8080
-      # KI-Assistent (Kunde/Organisation, siehe /assistant): OpenAI-API-Key aus
-      # https://platform.openai.com/api-keys (benötigt aufgeladenes Guthaben), nur
-      # serverseitig genutzt (nie im Browser-Bundle). Leer lassen deaktiviert den
-      # Assistenten kontrolliert (klare Fehlermeldung statt Absturz), die App startet
-      # trotzdem normal.
+      
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
     depends_on:
       - backend
     ports:
       - "3000:3000"
 
-  # --- Monitoring stack (optional, see docs/monitoring.md) -----------------------------------
-  # Not started by a plain "docker compose up -d" - only with
-  # "docker compose --profile monitoring up -d", so the default setup stays at just the two
-  # app containers. Prometheus scrapes /actuator/prometheus on `backend`; the backend's own
-  # logback config (logback-spring.xml) pushes logs straight to Loki, no separate log-shipper
-  # container needed; Grafana has both wired up as data sources out of the box (see
-  # monitoring/grafana/provisioning).
 
   prometheus:
     image: prom/prometheus:v3.14.0

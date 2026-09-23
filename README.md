@@ -69,14 +69,17 @@ Voraussetzung: Docker Desktop, ein Supabase-Projekt (Postgres-Datenbank; Storage
 `room-images` optional für Fotos).
 
 1. **Backend-Konfiguration** — `bookingssystem/.env` anlegen (siehe
-   `bookingssystem/.env.example` als Ausgangspunkt) mit mindestens:
-   - `SPRING_DATASOURCE_PASSWORD` — Passwort der Supabase-Datenbank
+   `bookingssystem/.env.example` als Ausgangspunkt) mit dem eigenen Supabase-Projekt:
+   - `SPRING_DATASOURCE_URL` — JDBC-Connection-String, Supabase "Session pooler" (Project
+     Settings → Database → Connection string → JDBC)
+   - `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD` — Datenbank-Zugangsdaten
    - `SECURITY_JWT_SECRET` — langer, zufälliger String (≥ 32 Zeichen)
-   - optional `SUPABASE_S3_ACCESS_KEY` / `SUPABASE_S3_SECRET_KEY` für Raumfoto-Uploads
+   - optional `SUPABASE_URL`, `SUPABASE_S3_ENDPOINT`, `SUPABASE_S3_REGION`,
+     `SUPABASE_S3_BUCKET`, `SUPABASE_S3_ACCESS_KEY`, `SUPABASE_S3_SECRET_KEY` für
+     Raumfoto-Uploads (Project Settings → Storage → S3 Connection)
 
-   Die Datenbank-URL, das Storage-Projekt und der Datenbank-Benutzername stehen bereits fest in
-   `docker-compose.yml` (Supabase Session-Pooler) — dort ggf. auf das eigene Supabase-Projekt
-   anpassen.
+   `docker-compose.yml` selbst enthält keine projektspezifischen Werte mehr - alles kommt aus
+   dieser Datei.
 
 2. **Root-Konfiguration** — `.env` im Projekt-Root anlegen (siehe `.env.example`) mit:
    - `NEXTAUTH_SECRET` — langer, zufälliger String
