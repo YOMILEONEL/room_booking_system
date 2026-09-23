@@ -4,7 +4,10 @@ Technischer Überblick über Architektur, Datenmodell, API und Geschäftsregeln 
 Für Setup/Quickstart siehe die [Root-README](../README.md). Für formale
 Anforderungen siehe [`requirements-engineering.md`](requirements-engineering.md), für den
 vollständigen Code-Review siehe [`code-review.md`](code-review.md), für den KI-Assistenten siehe
-[`ai-agent.md`](ai-agent.md).
+[`ai-agent.md`](ai-agent.md), für die interaktive API-Doku (Swagger UI) siehe
+[`openapi.md`](openapi.md), für den lokalen Monitoring-Stack (Prometheus/Loki/Grafana) siehe
+[`monitoring.md`](monitoring.md), für die JWT-Authentifizierung im Detail siehe
+[`jwt-authentication.md`](jwt-authentication.md).
 
 ## Architektur
 
@@ -101,7 +104,8 @@ Alle Endpunkte außer `/api/register`, `/api/login`, `/api/refresh`, `/api/logou
 | KI-Assistent-Verlauf | `/assistant/history` | eigener Verlauf (Kunde/Organisation) |
 
 Vollständige Endpunktliste mit HTTP-Methoden und exakten Berechtigungsregeln:
-[`code-review.md`](code-review.md) Abschnitt "REST-Endpunkte".
+[`code-review.md`](code-review.md) Abschnitt "REST-Endpunkte", oder interaktiv in Swagger UI
+(`http://localhost:8080/swagger-ui.html`, siehe [`openapi.md`](openapi.md)).
 
 ## Frontend-Struktur
 

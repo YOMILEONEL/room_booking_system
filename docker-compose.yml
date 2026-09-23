@@ -38,6 +38,10 @@ services:
       # requested for within the 30-minute validity window. Remove this once real email
       # delivery exists (docs/code-review.md, 2.1). Defaults to "false" if unset.
       APP_LOG_PASSWORD_RESET_TOKENS: "true"
+      # Monitoring (optional, see the "monitoring" profile below and docs/monitoring.md): where
+      # logback-spring.xml's Loki appender pushes logs to. Loki being unreachable (e.g. running
+      # without --profile monitoring) doesn't block startup or break logging.
+      LOKI_URL: ${LOKI_URL:-http://loki:3100/loki/api/v1/push}
     ports:
       - "8080:8080"
 
@@ -64,3 +68,57 @@ services:
       - backend
     ports:
       - "3000:3000"
+
+  # --- Monitoring stack (optional, see docs/monitoring.md) -----------------------------------
+  # Not started by a plain "docker compose up -d" - only with
+  # "docker compose --profile monitoring up -d", so the default setup stays at just the two
+  # app containers. Prometheus scrapes /actuator/prometheus on `backend`; the backend's own
+  # logback config (logback-spring.xml) pushes logs straight to Loki, no separate log-shipper
+  # container needed; Grafana has both wired up as data sources out of the box (see
+  # monitoring/grafana/provisioning).
+
+  prometheus:
+    image: prom/prometheus:v3.14.0
+    container_name: booking-prometheus
+    restart: "no"
+    profiles: ["monitoring"]
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "9090:9090"
+    depends_on:
+      - backend
+
+  loki:
+    image: grafana/loki:3.7.8
+    container_name: booking-loki
+    restart: "no"
+    profiles: ["monitoring"]
+    volumes:
+      - loki-data:/loki
+    ports:
+      - "3100:3100"
+
+  grafana:
+    image: grafana/grafana:13.2.2
+    container_name: booking-grafana
+    restart: "no"
+    profiles: ["monitoring"]
+    environment:
+      # Change this (or set GRAFANA_ADMIN_PASSWORD in .env) before using this anywhere reachable
+      # beyond your own machine - "admin" is a public default.
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "3001:3000"
+    depends_on:
+      - prometheus
+      - loki
+
+volumes:
+  prometheus-data:
+  loki-data:
+  grafana-data:

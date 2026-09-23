@@ -1,0 +1,10 @@
+# Scraped by the "prometheus" service in docker-compose.yml (monitoring profile). "backend" is
+# the Docker Compose service name, resolved via the internal Docker network - not localhost.
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: bookingssystem-backend
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["backend:8080"]

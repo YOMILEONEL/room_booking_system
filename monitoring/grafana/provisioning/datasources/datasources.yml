@@ -1,0 +1,18 @@
+# Auto-provisions both data sources on Grafana startup (docker-compose.yml "grafana" service
+# mounts this whole directory into /etc/grafana/provisioning) - no manual "Add data source" click
+# needed after `docker compose --profile monitoring up -d`.
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: true
+
+  - name: Loki
+    type: loki
+    access: proxy
+    url: http://loki:3100
+    editable: true

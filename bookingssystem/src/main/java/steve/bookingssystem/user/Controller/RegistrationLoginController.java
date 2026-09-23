@@ -1,5 +1,10 @@
 package steve.bookingssystem.user.Controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -31,6 +36,8 @@ import steve.bookingssystem.user.service.CustomUserDetailsService;
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
+@Tag(name = "Authentifizierung", description = "Registrierung, Login, Token-Refresh, Logout, Passwort-Reset - alles öffentlich, kein Bearer-Token nötig")
+@SecurityRequirements
 public class RegistrationLoginController {
 
     private static final Logger log = LoggerFactory.getLogger(RegistrationLoginController.class);
@@ -49,6 +56,13 @@ public class RegistrationLoginController {
     private boolean logResetToken;
 
     @PostMapping("/register")
+    @Operation(summary = "Neues Konto registrieren",
+            description = "Erstellt immer ein MEMBER-Konto (Kunde oder Organisation, je nach customerType). " +
+                    "ADMIN-Konten können nur direkt in der Datenbank vergeben werden.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Konto angelegt, Access- und Refresh-Token geliefert"),
+            @ApiResponse(responseCode = "400", description = "E-Mail bereits vergeben oder Pflichtfelder fehlen")
+    })
     public ResponseEntity<?> registerUser(@Valid @RequestBody RegisterRequest request) {
         if (userRepository.findByEmail(request.email()) != null) {
             throw new IllegalArgumentException("Diese E-Mail-Adresse wird bereits verwendet.");
@@ -90,6 +104,11 @@ public class RegistrationLoginController {
     }
 
     @PostMapping("/login")
+    @Operation(summary = "Anmelden", description = "Liefert bei gültigen Zugangsdaten ein Access- und ein Refresh-Token.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Login erfolgreich"),
+            @ApiResponse(responseCode = "401", description = "E-Mail-Adresse oder Passwort falsch")
+    })
     public ResponseEntity<AuthResponse> loginUser(@Valid @RequestBody LoginRequest request) {
         // Narrowed from catch(Exception e): that used to also swallow unrelated failures (DB
         // down, NPE) and mislabel them as "wrong password" - only AuthenticationException means
@@ -106,6 +125,11 @@ public class RegistrationLoginController {
     }
 
     @PostMapping("/refresh")
+    @Operation(summary = "Access-Token erneuern", description = "Tauscht ein gültiges Refresh-Token gegen ein neues Access-Token.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Neues Access-Token geliefert"),
+            @ApiResponse(responseCode = "401", description = "Refresh-Token ungültig, abgelaufen oder widerrufen")
+    })
     public AccessTokenResponse refresh(@RequestBody RefreshRequest request) {
         RefreshToken refreshToken = refreshTokenService.validate(request.refreshToken());
         String accessToken = jwtService.generateAccessToken(userDetailsService.loadUserByUsername(refreshToken.getUser().getEmail()));
@@ -113,11 +137,18 @@ public class RegistrationLoginController {
     }
 
     @PostMapping("/logout")
+    @Operation(summary = "Abmelden", description = "Widerruft das übergebene Refresh-Token, das Access-Token bleibt bis zum Ablauf gültig.")
+    @ApiResponse(responseCode = "200", description = "Refresh-Token widerrufen")
     public void logout(@RequestBody RefreshRequest request) {
         refreshTokenService.revoke(request.refreshToken());
     }
 
     @PostMapping("/forgot-password")
+    @Operation(summary = "Passwort-Reset anfordern",
+            description = "Antwortet immer mit derselben generischen Nachricht, unabhängig davon, ob die " +
+                    "E-Mail-Adresse existiert (Schutz vor Enumeration). Der Reset-Token wird aktuell nur " +
+                    "geloggt, nicht gemailt (siehe docs/code-review.md).")
+    @ApiResponse(responseCode = "200", description = "Generische Bestätigung (immer, unabhängig vom Ergebnis)")
     public ResponseEntity<String> forgotPassword(@RequestBody ForgotPasswordRequest request) {
         User user = userRepository.findByEmail(request.email());
         if (user != null) {
@@ -137,6 +168,13 @@ public class RegistrationLoginController {
     }
 
     @PostMapping("/reset-password")
+    @Operation(summary = "Passwort mit Reset-Token setzen",
+            description = "Widerruft dabei zusätzlich alle bestehenden Refresh-Tokens des Kontos, damit ein " +
+                    "gestohlenes Refresh-Token nicht über den Passwort-Reset hinaus gültig bleibt.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Passwort geändert"),
+            @ApiResponse(responseCode = "401", description = "Token ungültig, abgelaufen oder bereits verwendet")
+    })
     public void resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
         User user = passwordResetTokenService.consume(request.token());
         user.setPassword(passwordEncoder.encode(request.newPassword()));

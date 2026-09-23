@@ -1,0 +1,42 @@
+<configuration>
+    <!-- Spring Boot's own defaults (log level conversion rule, standard patterns) and console
+         appender - keeps `docker logs booking-backend` exactly as before; this file only adds
+         Loki on top, it doesn't replace anything. -->
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+    <include resource="org/springframework/boot/logging/logback/console-appender.xml"/>
+
+    <!-- "springProperty" (not plain "property") to resolve through the Spring Environment - picks
+         up loki.url from application.properties (which itself reads LOKI_URL, see
+         docker-compose.yml) instead of duplicating the env-var/default logic here. Requires this
+         file to be named logback-spring.xml, not logback.xml. -->
+    <springProperty scope="context" name="lokiUrl" source="loki.url"/>
+    <springProperty scope="context" name="appName" source="spring.application.name"/>
+
+    <appender name="LOKI" class="com.github.loki4j.logback.Loki4jAppender">
+        <http>
+            <url>${lokiUrl}</url>
+        </http>
+        <!-- level as a label (not e.g. logger/thread) keeps label cardinality low - Grafana can
+             filter/aggregate by level cheaply, everything else is still searchable as log text.
+             One pair per line (the default pairSeparator), not comma-separated. -->
+        <labels>
+            app = ${appName}
+            level = %level
+        </labels>
+        <message>
+            <pattern>[%thread] %logger{36} - %msg%n</pattern>
+        </message>
+    </appender>
+
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+        <!-- Loki4jAppender already batches and sends on its own background thread (non-blocking
+             internal queue), so a slow/unreachable Loki (e.g. running the app without the
+             "monitoring" Compose profile) can't add latency to request-handling threads - no
+             extra AsyncAppender wrapper needed. Matches the "optional integration, app still
+             works without it" pattern used for GEMINI/OPENAI_API_KEY and Supabase S3 elsewhere in
+             this file. -->
+        <appender-ref ref="LOKI"/>
+    </root>
+
+</configuration>

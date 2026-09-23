@@ -7,13 +7,18 @@ eine REST-API kommunizieren und gemeinsam per Docker Compose betrieben werden.
 > Ausführlichere Dokumentation liegt im Ordner [`docs/`](docs/README.md):
 > Architektur- und Feature-Überblick in [`docs/README.md`](docs/README.md),
 > Anforderungen in [`docs/requirements-engineering.md`](docs/requirements-engineering.md),
-> vollständiger Code-Review in [`docs/code-review.md`](docs/code-review.md).
+> vollständiger Code-Review in [`docs/code-review.md`](docs/code-review.md),
+> interaktive API-Doku (Swagger UI) in [`docs/openapi.md`](docs/openapi.md),
+> lokaler Monitoring-Stack (Prometheus/Loki/Grafana) in [`docs/monitoring.md`](docs/monitoring.md),
+> JWT-Authentifizierung im Detail in [`docs/jwt-authentication.md`](docs/jwt-authentication.md).
 
 ## Tech-Stack
 
 | Bereich | Technologien |
 |---|---|
 | Backend | Java 23, Spring Boot 3.5, Spring Security (JWT), Spring Data JPA/Hibernate, Lombok |
+| API-Doku | springdoc-openapi (Swagger UI, generiert aus den Controllern) |
+| Monitoring | Prometheus (Metriken), Loki (Logs), Grafana - optional, siehe [`docs/monitoring.md`](docs/monitoring.md) |
 | Datenbank | PostgreSQL (Supabase-gehostet) |
 | Dateispeicher | Supabase Storage (S3-kompatibel, AWS SDK v2) für Raumfotos |
 | PDF-Erzeugung | OpenPDF (Rechnungen) |

@@ -48,6 +48,14 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth ->
                         auth
                                 .requestMatchers("/api/register", "/api/login", "/api/refresh", "/api/logout", "/api/forgot-password", "/api/reset-password").permitAll()
+                                // Docs are for browsing, not calling the API - Swagger UI's own
+                                // "Try it out" still needs a real Bearer token via Authorize.
+                                .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+                                // Prometheus (docker-compose.yml, "monitoring" profile) scrapes
+                                // /actuator/prometheus on a schedule - it has no JWT to send.
+                                // Only health/info/prometheus are exposed at all (see
+                                // application.properties management.endpoints.web.exposure.include).
+                                .requestMatchers("/actuator/health", "/actuator/info", "/actuator/prometheus").permitAll()
                                 .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
