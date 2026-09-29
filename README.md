@@ -10,7 +10,8 @@ eine REST-API kommunizieren und gemeinsam per Docker Compose betrieben werden.
 > vollständiger Code-Review in [`docs/code-review.md`](docs/code-review.md),
 > interaktive API-Doku (Swagger UI) in [`docs/openapi.md`](docs/openapi.md),
 > lokaler Monitoring-Stack (Prometheus/Loki/Grafana) in [`docs/monitoring.md`](docs/monitoring.md),
-> JWT-Authentifizierung im Detail in [`docs/jwt-authentication.md`](docs/jwt-authentication.md).
+> JWT-Authentifizierung im Detail in [`docs/jwt-authentication.md`](docs/jwt-authentication.md),
+> Stripe-Zahlungen in [`docs/stripe-payments.md`](docs/stripe-payments.md).
 
 ## Tech-Stack
 
@@ -20,6 +21,7 @@ eine REST-API kommunizieren und gemeinsam per Docker Compose betrieben werden.
 | API-Doku | springdoc-openapi (Swagger UI, generiert aus den Controllern) |
 | Monitoring | Prometheus (Metriken), Loki (Logs), Grafana - optional, siehe [`docs/monitoring.md`](docs/monitoring.md) |
 | Datenbank | PostgreSQL (Supabase-gehostet) |
+| Zahlungen | Stripe Checkout (Test-Modus) - siehe [`docs/stripe-payments.md`](docs/stripe-payments.md) |
 | Dateispeicher | Supabase Storage (S3-kompatibel, AWS SDK v2) für Raumfotos |
 | PDF-Erzeugung | OpenPDF (Rechnungen) |
 | Frontend | Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS v3, NextAuth |
@@ -40,9 +42,10 @@ eine REST-API kommunizieren und gemeinsam per Docker Compose betrieben werden.
 - **Buchungen**: Zeitraum-Auswahl mit Überlappungsprüfung, Live-Anzeige "Gebucht bis …" auf der
   Raumliste, Admins können im Namen eines Kunden buchen (per E-Mail-Suche). Laufende oder bereits
   bezahlte Buchungen können nicht mehr gelöscht werden.
-- **Zahlungen & Rechnungen**: Jede Buchung erzeugt eine Zahlung (offen/bezahlt); Admins
-  bestätigen Zahlungen manuell, was automatisch eine Rechnung erzeugt. Kunden können die Rechnung
-  als PDF herunterladen.
+- **Zahlungen & Rechnungen**: Jede Buchung erzeugt eine Zahlung (offen/bezahlt); Kunden bezahlen
+  direkt per Stripe Checkout (Test-Modus), was automatisch eine Rechnung erzeugt. Kunden können
+  die Rechnung als PDF herunterladen. Details in
+  [`docs/stripe-payments.md`](docs/stripe-payments.md).
 - **Rabattcodes**: prozentual oder absolut, mit Gültigkeitszeitraum, nur für Nicht-Organisationen.
 - **Admin-Dashboard**: Kennzahlen (verfügbare/belegte Räume, Nutzerzahl, Umsatz), offene
   Zahlungen, meistgebuchte Räume, aktivste Kunden — vollständig responsive inkl.
@@ -77,6 +80,9 @@ Voraussetzung: Docker Desktop, ein Supabase-Projekt (Postgres-Datenbank; Storage
    - optional `SUPABASE_URL`, `SUPABASE_S3_ENDPOINT`, `SUPABASE_S3_REGION`,
      `SUPABASE_S3_BUCKET`, `SUPABASE_S3_ACCESS_KEY`, `SUPABASE_S3_SECRET_KEY` für
      Raumfoto-Uploads (Project Settings → Storage → S3 Connection)
+   - optional `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` für Zahlungen (Test-Modus, siehe
+     [`docs/stripe-payments.md`](docs/stripe-payments.md)) — leer lassen deaktiviert den
+     Bezahlvorgang kontrolliert, der Rest der App läuft trotzdem normal.
 
    `docker-compose.yml` selbst enthält keine projektspezifischen Werte mehr - alles kommt aus
    dieser Datei.
@@ -122,6 +128,8 @@ Siehe [`docs/code-review.md`](docs/code-review.md) für die vollständige, prior
 wichtigsten Punkte:
 
 - Kein echter E-Mail-Versand — Passwort-Reset-Links werden aktuell nur geloggt.
-- Keine echte Zahlungsanbieter-Anbindung — Zahlungen werden von Admins manuell bestätigt.
+- Stripe läuft nur im Test-Modus (keine Live-Keys/echten Zahlungen) und deckt nur Kartenzahlung
+  ohne Rückerstattungen ab — siehe [`docs/stripe-payments.md`](docs/stripe-payments.md), Abschnitt
+  "Bekannte Grenzen".
 - Einige Schreiboperationen laufen ohne Datenbank-Transaktion; siehe Code-Review für Details.
 

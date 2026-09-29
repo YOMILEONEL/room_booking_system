@@ -21,9 +21,11 @@ doch ein Admin-Token durchkommt.
 | `app/lib/assistant/openai-client.ts` | OpenAI-Client, Tool-Deklarationen, manuelle Konversationsführung (Chat Completions API) |
 | `app/lib/assistant/tools.ts` | Ruft die bestehenden Spacio-Backend-Endpunkte (`/booking/getAll`, `/room/Get`) mit dem Access-Token der anfragenden Person auf |
 | `app/lib/auth.ts` | `authOptions`, ausgelagert aus `api/auth/[...nextauth]/route.ts` (siehe unten, warum) |
-| `app/api/assistant/route.ts` | Route Handler: Session/Rollen-Check, Validierung, ruft `askAssistant` |
+| `app/api/assistant/route.ts` | Route Handler: Session/Rollen-Check, Validierung, lädt Kontext, ruft `askAssistant` |
 | `app/api/assistant.api.ts` | Schlanker Client-seitiger Fetch-Wrapper für `/api/assistant` |
-| `app/assistant/page.tsx`, `app/components/AssistantChat.tsx` | Chat-UI (Nachrichtenverlauf, Eingabefeld, Beispiel-Fragen, Bestätigungs-UI für Buchung/Stornierung) |
+| `app/api/assistantSession.api.ts` | Client-seitige Aufrufe direkt gegen das Backend: Sessions anlegen/auflisten/löschen, Verlauf einer Session lesen/schreiben |
+| `app/assistant/page.tsx` | Chat-Seite inkl. Session-Auswahl (neue Unterhaltung / frühere Sessions) |
+| `app/components/AssistantChat.tsx` | Chat-UI für **eine** Session (Pflicht-Prop `sessionId`), Nachrichtenverlauf, Eingabefeld, Beispiel-Fragen, Bestätigungs-UI für Buchung/Stornierung |
 | `app/components/NavBar.tsx`, `AssistantWidget.tsx` | Verlinkt `/assistant` bzw. öffnet den Chat als Floating-Widget, nur für Nicht-Admin |
 
 ## Function Calling statt Freitext-Prompt
@@ -57,6 +59,42 @@ Assistant-Turn mit `tool_calls`, dann pro Tool-Aufruf eine `role: "tool"`-Nachri
 `tool_call_id`), maximal 3 Runden. Ein `create_booking`/`cancel_booking`-Aufruf beendet die
 Schleife sofort (die "terminal"-Variante in `executeTool`), statt dem Modell eine Tool-Antwort
 zurückzugeben — es gibt für diese beiden Tools kein "danach" innerhalb der Konversation.
+
+## Chat-Sessions und Konversationskontext
+
+Jede Unterhaltung ist eine eigene **Session** (`AssistantSession`, Backend), nicht eine einzige,
+nie endende Liste pro Person:
+
+- **Bei jedem Login** legt `lib/auth.ts`s `jwt()`-Callback best-effort automatisch eine neue,
+  leere Session an (`POST /assistant/sessions`) und merkt sich deren ID in
+  `session.freshAssistantSessionId` - schlägt der Aufruf fehl (Backend kurz nicht erreichbar),
+  bleibt das Feld einfach leer, der Login selbst darf dadurch nie fehlschlagen.
+- **Auf `/assistant`** sieht die Person diese frische Session vorausgewählt, dazu eine Leiste mit
+  früheren Sessions (Vorschau = erste Frage, Datum) zum Umschalten, plus "+ Neue Unterhaltung".
+  Das `AssistantWidget` (Floating-Chat auf allen anderen Seiten) hat keine Auswahl - es nutzt
+  immer die beim Login angelegte Session.
+- **Beim Logout** (`NavBar.tsx`) wird die beim Login angelegte Session gelöscht, aber **nur**,
+  wenn sie nie benutzt wurde (`AssistantSessionServiceImpl.deleteIfUnused` prüft serverseitig,
+  ob die Session irgendeine Nachricht hat, bevor sie löscht) - ein leerer "neue Session"-Eintrag,
+  den die Person nie angeklickt hat, verschwindet also wieder statt die Session-Liste
+  vollzumüllen.
+
+**Kontext innerhalb einer Session**: `askAssistant` bekam vorher bei jeder Frage nur
+`[System-Prompt, aktuelle Frage]` - der Assistent hatte kein Gedächtnis für Folgefragen, selbst
+wenn der Verlauf in der UI sichtbar war. `api/assistant/route.ts` lädt jetzt vor jedem Aufruf den
+bisherigen Verlauf der aktiven Session (`fetchSessionHistory`, best-effort - schlägt das Laden
+fehl, antwortet das Modell für diese eine Anfrage einfach ohne früheren Kontext statt die Anfrage
+abzubrechen) und reicht ihn an `openai-client.ts`s `askAssistant` durch, die daraus echte
+`user`/`assistant`-Turns vor der neuen Frage in den `messages`-Array einfügt - wie bei
+Claude/ChatGPT im Browser.
+
+Gedeckelt auf die letzten **15 Nachrichten** (`MAX_CONTEXT_MESSAGES` in `openai-client.ts`), damit
+eine sehr lange Session nicht unbegrenzt Tokens (und Kosten) pro Anfrage aufbaut. Keine
+Zusammenfassung von allem, was älter ist - eine sehr lange Unterhaltung "vergisst" ihren Anfang,
+sobald sie über dieses Fenster hinauswächst. Nur reine Text-Turns werden als Kontext
+wiederverwendet; ein `pending_booking`/`pending_cancellation`-Vorschlag geht als seine bereits
+aufgelöste, menschenlesbare Zusammenfassung ein (`resultToLogText` in `api/assistant/route.ts`),
+nicht als rekonstruierter Tool-Call.
 
 ## Timeout gegen hängende Anfragen
 
@@ -92,7 +130,8 @@ weiter.
   eingebaut; bei echtem Kunden-Traffic sollte hier nachgerüstet werden (z. B. mit
   `security/RateLimiter.java` als Vorbild, serverseitig im Backend, oder analog in Next.js), um
   die Kosten pro Person zu begrenzen.
-- Kein Gesprächsverlauf über einen Seiten-Reload hinaus (nur React-State).
+- **Kein Kontext über das 15-Nachrichten-Fenster hinaus** (siehe "Chat-Sessions und
+  Konversationskontext" oben) - keine Zusammenfassung längerer Sessions.
 - Nicht gestreamt: die Antwort kommt komplett auf einmal, kein Tippeffekt.
 - Kein Retry mit Backoff bei transienten Fehlern über die eine `maxRetries: 1`-Wiederholung der
   SDK hinaus — die Person muss bei anhaltenden Fehlern manuell erneut senden.

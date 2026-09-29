@@ -18,6 +18,24 @@ function decodeAccessTokenExpiryMs(accessToken: string): number {
   }
 }
 
+// Best-effort: login must never fail because the assistant feature (or the backend generally)
+// is briefly unreachable. A missing freshAssistantSessionId just means /assistant falls back to
+// creating one itself on first visit (see assistant/page.tsx).
+async function createFreshAssistantSession(accessToken: string): Promise<string | undefined> {
+  try {
+    const res = await fetch(`${BACKEND_INTERNAL_URL}/assistant/sessions`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!res.ok) return undefined;
+    const data = (await res.json()) as { id?: string };
+    return data.id;
+  } catch (err) {
+    console.error("Failed to create assistant session on login:", err);
+    return undefined;
+  }
+}
+
 async function refreshAccessToken(token: JWT): Promise<JWT> {
   try {
     const res = await fetch(`${BACKEND_INTERNAL_URL}/api/refresh`, {
@@ -114,6 +132,12 @@ export const authOptions: NextAuthOptions = {
         token.accessToken = user.accessToken;
         token.refreshToken = user.refreshToken;
         token.accessTokenExpires = decodeAccessTokenExpiryMs(user.accessToken);
+
+        // Same Kunde/Organisation-only product decision as api/assistant/route.ts - admins never
+        // see /assistant, so creating a session for them here would just be an unused row.
+        if (user.role !== "ADMIN") {
+          token.freshAssistantSessionId = await createFreshAssistantSession(user.accessToken);
+        }
         return token;
       }
 
@@ -167,6 +191,7 @@ export const authOptions: NextAuthOptions = {
       }
       session.accessToken = token.accessToken;
       session.error = token.error;
+      session.freshAssistantSessionId = token.freshAssistantSessionId;
       return session;
     },
   },

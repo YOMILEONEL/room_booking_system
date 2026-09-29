@@ -39,6 +39,14 @@ public class Payment {
     @Column(length = 80)
     private String appliedDiscountCode;
 
+    // Set when a Stripe Checkout Session is created for this payment (StripeServiceImpl).
+    // No nullable=false - added after payments already existed, same reasoning as
+    // AssistantMessage.session. Only used for traceability/idempotency on the create-session
+    // side; the webhook itself correlates back to a Payment via Session.client_reference_id
+    // (= this payment's own id), not this column.
+    @Column(length = 255)
+    private String stripeCheckoutSessionId;
+
     private Instant createdAt;
     private Instant paidAt;
 

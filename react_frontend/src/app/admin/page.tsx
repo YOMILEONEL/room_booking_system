@@ -4,9 +4,8 @@ import * as React from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { fetchAdminDashboard, type AdminDashboard } from "../api/admin.api";
-import { confirmPayment } from "../api/payment.api";
 import { formatLocalDate } from "../lib/formatDate";
-import { Card, Badge, Button, Alert } from "../components/ui";
+import { Card, Badge, Alert } from "../components/ui";
 
 const currency = new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" });
 
@@ -30,8 +29,6 @@ export default function AdminOverviewPage() {
   const { data: session } = useSession();
   const [data, setData] = React.useState<AdminDashboard | null>(null);
   const [error, setError] = React.useState<string | null>(null);
-  const [confirmingId, setConfirmingId] = React.useState<string | null>(null);
-  const [paymentError, setPaymentError] = React.useState<string | null>(null);
 
   const loadDashboard = React.useCallback(async () => {
     try {
@@ -46,20 +43,6 @@ export default function AdminOverviewPage() {
   React.useEffect(() => {
     loadDashboard();
   }, [loadDashboard]);
-
-  const handleConfirmPayment = async (paymentId: string) => {
-    setConfirmingId(paymentId);
-    setPaymentError(null);
-    try {
-      await confirmPayment(paymentId);
-      await loadDashboard();
-    } catch (err) {
-      console.error("Zahlung konnte nicht bestätigt werden:", err);
-      setPaymentError("Zahlung konnte nicht bestätigt werden.");
-    } finally {
-      setConfirmingId(null);
-    }
-  };
 
   const tiles: { label: string; value: string; tone: TileTone; href: string }[] = data
     ? [
@@ -79,8 +62,6 @@ export default function AdminOverviewPage() {
       </div>
 
       {error && <Alert variant="danger">{error}</Alert>}
-      {paymentError && <Alert variant="danger">{paymentError}</Alert>}
-
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         {tiles.map((tile) => (
           <Link key={tile.label} href={tile.href}>
@@ -164,14 +145,7 @@ export default function AdminOverviewPage() {
                       {currency.format(b.payment.amount)}
                     </span>
                   )}
-                  <Button
-                    variant="secondary"
-                    className="text-xs py-1.5 px-2.5"
-                    disabled={confirmingId === b.payment?.id}
-                    onClick={() => b.payment && handleConfirmPayment(b.payment.id)}
-                  >
-                    {confirmingId === b.payment?.id ? "..." : "Bestätigen"}
-                  </Button>
+                  <Badge variant="pending">Wartet auf Stripe-Zahlung</Badge>
                 </div>
               </div>
             ))}

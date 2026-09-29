@@ -7,7 +7,8 @@ vollständigen Code-Review siehe [`code-review.md`](code-review.md), für den KI
 [`ai-agent.md`](ai-agent.md), für die interaktive API-Doku (Swagger UI) siehe
 [`openapi.md`](openapi.md), für den lokalen Monitoring-Stack (Prometheus/Loki/Grafana) siehe
 [`monitoring.md`](monitoring.md), für die JWT-Authentifizierung im Detail siehe
-[`jwt-authentication.md`](jwt-authentication.md).
+[`jwt-authentication.md`](jwt-authentication.md), für Stripe-Zahlungen siehe
+[`stripe-payments.md`](stripe-payments.md).
 
 ## Architektur
 
@@ -56,11 +57,12 @@ den Kunden-Buchungs-Endpunkt mit einer Kunden-E-Mail.
 | `Room` | name, capacity, location, pricePerDay, roomStatus, imageUrl, active | 1–n RoomImage, 1–n Booking |
 | `RoomImage` | imageUrl, position | n–1 Room |
 | `Booking` | startTime, endTime, createdAt | n–1 Room, n–1 User, 1–1 Payment |
-| `Payment` | amount, status (PENDING/PAID), appliedDiscountCode, paidAt | 1–1 Booking, 1–1 Invoice |
+| `Payment` | amount, status (PENDING/PAID), appliedDiscountCode, paidAt, stripeCheckoutSessionId | 1–1 Booking, 1–1 Invoice |
 | `Invoice` | invoiceNumber, customerEmailSnapshot, roomNameSnapshot, amount, invoiceDate | 1–1 Payment |
 | `DiscountCode` | code, type (PERCENT/ABSOLUTE), value, validFrom, validUntil, active | keine (nur als String in `Payment.appliedDiscountCode` referenziert) |
 | `RefreshToken`, `PasswordResetToken` | token, expiresAt, revoked/used | n–1 User |
-| `AssistantMessage` | role (USER/ASSISTANT), content, createdAt | n–1 User |
+| `AssistantSession` | createdAt | n–1 User, 1–n AssistantMessage |
+| `AssistantMessage` | role (USER/ASSISTANT), content, createdAt | n–1 User, n–1 AssistantSession |
 
 Alle IDs sind UUIDs. Geldbeträge sind `DECIMAL(10,2)`. Enums werden konsequent als String
 persistiert (`@Enumerated(EnumType.STRING)`).
@@ -77,9 +79,11 @@ persistiert (`@Enumerated(EnumType.STRING)`).
   den heutigen Tag einschließt — gilt für Kunden **und** Admins gleichermaßen.
 - **Raum-Soft-Delete**: Deaktivierte Räume verschwinden für Kunden (404), bleiben für Admins
   sichtbar und bearbeitbar. Es gibt keinen Hard-Delete.
-- **Zahlung → Rechnung**: Erst wenn ein Admin eine Zahlung manuell bestätigt, wird automatisch
-  eine Rechnung mit fortlaufender Nummer (`INV-<Jahr>-<6-stellig>`) erzeugt; die Rechnungsdaten
-  (Kundenname, Raumname, Betrag) werden zum Bestätigungszeitpunkt eingefroren ("Snapshot").
+- **Zahlung → Rechnung**: Erst wenn Stripe eine Zahlung per Webhook bestätigt (siehe
+  [`stripe-payments.md`](stripe-payments.md)), wird automatisch eine Rechnung mit fortlaufender
+  Nummer (`INV-<Jahr>-<6-stellig>`) erzeugt; die Rechnungsdaten (Kundenname, Raumname, Betrag)
+  werden zum Bestätigungszeitpunkt eingefroren ("Snapshot"). Ein Admin-Endpunkt für dieselbe
+  Bestätigung bleibt als nicht in der Oberfläche verdrahteter technischer Override bestehen.
 - **Token-Laufzeiten**: Access-Token 60 Minuten, Refresh-Token 30 Tage, Passwort-Reset-Token 30
   Minuten (alle über Umgebungsvariablen konfigurierbar).
 
@@ -97,11 +101,11 @@ Alle Endpunkte außer `/api/register`, `/api/login`, `/api/refresh`, `/api/logou
 | Benutzer | `/user/*` | eigenes Profil oder Admin |
 | Räume | `/room/*` | Lesen: eingeloggt · Schreiben/Fotos: nur Admin |
 | Buchungen | `/booking/*` | eigene Buchungen oder Admin |
-| Zahlungen | `/payment/*` | Lesen: Besitzer/Admin · Bestätigen: nur Admin |
+| Zahlungen | `/payment/*` | Lesen/Stripe-Checkout starten: Besitzer/Admin · Webhook (`/payment/stripe/webhook`): öffentlich, signaturgeprüft |
 | Rechnungen | `/invoice/*` | Besitzer/Admin (JSON + PDF-Download) |
 | Rabattcodes | `/discount-code` | nur Admin |
 | Admin-Dashboard | `/admin/dashboard` | nur Admin |
-| KI-Assistent-Verlauf | `/assistant/history` | eigener Verlauf (Kunde/Organisation) |
+| KI-Assistent-Sessions/-Verlauf | `/assistant/sessions/*` | eigene Sessions (Kunde/Organisation) |
 
 Vollständige Endpunktliste mit HTTP-Methoden und exakten Berechtigungsregeln:
 [`code-review.md`](code-review.md) Abschnitt "REST-Endpunkte", oder interaktiv in Swagger UI

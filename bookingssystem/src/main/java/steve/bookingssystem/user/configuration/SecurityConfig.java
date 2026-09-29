@@ -56,6 +56,19 @@ public class SecurityConfig {
                                 // Only health/info/prometheus are exposed at all (see
                                 // application.properties management.endpoints.web.exposure.include).
                                 .requestMatchers("/actuator/health", "/actuator/info", "/actuator/prometheus").permitAll()
+                                // Stripe calls this directly, with no JWT - security comes from
+                                // StripeServiceImpl's webhook signature check instead. See
+                                // docs/stripe-payments.md.
+                                .requestMatchers("/payment/stripe/webhook").permitAll()
+                                // Without this, an exception thrown while handling an already-
+                                // permitAll request (e.g. a missing Stripe-Signature header on
+                                // the webhook above) forwards internally to /error - which,
+                                // unlike the original request, wasn't itself permitAll, so
+                                // Spring Security blocks *that* with an unauthenticated 403 and
+                                // masks the real status code (400/etc.) GlobalExceptionHandler
+                                // would otherwise have produced. Verified live: without this
+                                // line, a malformed webhook call returns 403 instead of 400.
+                                .requestMatchers("/error").permitAll()
                                 .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)

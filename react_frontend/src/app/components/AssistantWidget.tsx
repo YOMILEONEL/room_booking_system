@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { usePathname } from "next/navigation";
 import AssistantChat from "./AssistantChat";
 import BotIcon from "./BotIcon";
+import { createAssistantSession } from "../api/assistantSession.api";
 
 // Mounted once in the root layout (see layout.tsx) so it floats over every page - except
 // /assistant itself, which is already the full chat experience and would just duplicate this.
@@ -15,10 +16,24 @@ export default function AssistantWidget() {
   const pathname = usePathname();
   const [open, setOpen] = React.useState(false);
 
+  // Unlike /assistant (assistant/page.tsx), the widget doesn't offer a session picker - it's a
+  // small floating panel, not the place for that. It just uses the session created at this
+  // login, falling back to creating one on the spot if that's missing for some reason (e.g. the
+  // backend was briefly unreachable during login).
+  const [fallbackSessionId, setFallbackSessionId] = React.useState<string | null>(null);
+  const sessionId = session?.freshAssistantSessionId ?? fallbackSessionId ?? undefined;
+
   const isEligible = status === "authenticated" && session?.user?.role !== "ADMIN";
   const onAssistantPage = pathname === "/assistant";
 
-  if (!isEligible || onAssistantPage) {
+  React.useEffect(() => {
+    if (!isEligible || onAssistantPage || sessionId || fallbackSessionId) return;
+    createAssistantSession()
+      .then((s) => setFallbackSessionId(s.id))
+      .catch((err) => console.error("Assistant-Session konnte nicht angelegt werden:", err));
+  }, [isEligible, onAssistantPage, sessionId, fallbackSessionId]);
+
+  if (!isEligible || onAssistantPage || !sessionId) {
     return null;
   }
 
@@ -41,7 +56,7 @@ export default function AssistantWidget() {
             </button>
           </div>
           <div className="flex-1 min-h-0">
-            <AssistantChat compact />
+            <AssistantChat key={sessionId} sessionId={sessionId} />
           </div>
         </div>
       )}

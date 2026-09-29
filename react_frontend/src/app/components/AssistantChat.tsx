@@ -4,7 +4,7 @@ import * as React from "react";
 import { useSession } from "next-auth/react";
 import { askAssistant, type AssistantResult } from "../api/assistant.api";
 import { createBooking, deleteBooking } from "../api/booking.api";
-import { fetchAssistantHistory, logAssistantMessage } from "../api/assistantHistory.api";
+import { fetchAssistantHistory, logAssistantMessage } from "../api/assistantSession.api";
 import { extractErrorMessage } from "../api/apiClient";
 import { formatLocalDate } from "../lib/formatDate";
 import { Button, TextInput, Alert } from "./ui";
@@ -81,8 +81,12 @@ function resultToMessage(result: AssistantResult): ChatMessage {
 }
 
 // Shared by the full-page /assistant view and the site-wide floating AssistantWidget - only
-// the surrounding chrome (page shell vs. floating panel) differs between the two.
-export default function AssistantChat({ compact = false }: { compact?: boolean }) {
+// the surrounding chrome (page shell vs. floating panel) differs between the two, both give this
+// component a parent with a real, bounded height and it fills it (h-full). sessionId is the
+// chat session (see assistantSession.api.ts) this instance reads/writes - the parent is
+// responsible for mounting a fresh instance (e.g. via `key={sessionId}`) when it changes, so
+// this component never has to reset its own state mid-session.
+export default function AssistantChat({ sessionId }: { sessionId: string }) {
   const { data: session } = useSession();
   const userId = session?.user?.id ?? null;
 
@@ -100,7 +104,7 @@ export default function AssistantChat({ compact = false }: { compact?: boolean }
   React.useEffect(() => {
     if (!userId) return;
     let cancelled = false;
-    fetchAssistantHistory()
+    fetchAssistantHistory(sessionId)
       .then((entries) => {
         if (cancelled) return;
         setMessages(
@@ -118,7 +122,7 @@ export default function AssistantChat({ compact = false }: { compact?: boolean }
     return () => {
       cancelled = true;
     };
-  }, [userId]);
+  }, [userId, sessionId]);
 
   React.useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -138,7 +142,7 @@ export default function AssistantChat({ compact = false }: { compact?: boolean }
     setSending(true);
 
     try {
-      const result = await askAssistant(trimmed);
+      const result = await askAssistant(trimmed, sessionId);
       setMessages((prev) => [...prev, resultToMessage(result)]);
     } catch (err) {
       console.error("Fehler beim Anfragen des KI-Assistenten:", err);
@@ -173,7 +177,7 @@ export default function AssistantChat({ compact = false }: { compact?: boolean }
           ? `Gebucht: ${msg.roomName}, ${formatLocalDate(msg.startDate)} – ${formatLocalDate(msg.endDate)}. Preis: ${currency.format(amount)}`
           : `Gebucht: ${msg.roomName}, ${formatLocalDate(msg.startDate)} – ${formatLocalDate(msg.endDate)}.`;
       updateMessage(msg.id, { status: "confirmed", resultText });
-      logAssistantMessage(resultText).catch((err) => console.error("Verlauf konnte nicht gespeichert werden:", err));
+      logAssistantMessage(sessionId, resultText).catch((err) => console.error("Verlauf konnte nicht gespeichert werden:", err));
     } catch (err) {
       console.error("Fehler beim Anlegen der Buchung:", err);
       updateMessage(msg.id, { status: "error", resultText: extractErrorMessage(err, "Buchung fehlgeschlagen.") });
@@ -186,7 +190,7 @@ export default function AssistantChat({ compact = false }: { compact?: boolean }
       await deleteBooking(msg.bookingId);
       const resultText = `Storniert: ${msg.roomName}, ${formatLocalDate(msg.startDate)} – ${formatLocalDate(msg.endDate)}.`;
       updateMessage(msg.id, { status: "confirmed", resultText });
-      logAssistantMessage(resultText).catch((err) => console.error("Verlauf konnte nicht gespeichert werden:", err));
+      logAssistantMessage(sessionId, resultText).catch((err) => console.error("Verlauf konnte nicht gespeichert werden:", err));
     } catch (err) {
       console.error("Fehler beim Stornieren der Buchung:", err);
       updateMessage(msg.id, { status: "error", resultText: extractErrorMessage(err, "Stornierung fehlgeschlagen.") });
@@ -194,8 +198,8 @@ export default function AssistantChat({ compact = false }: { compact?: boolean }
   };
 
   return (
-    <div className={`flex flex-col ${compact ? "h-full" : "h-[60vh]"}`}>
-      <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 grid gap-3 content-start">
+    <div className="flex flex-col h-full min-h-0">
+      <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto p-4 grid gap-3 content-start">
         {messages.length === 0 && historyLoaded && (
           <div className="grid gap-2">
             <p className="text-sm text-text-muted">Ein paar Beispiele zum Ausprobieren:</p>

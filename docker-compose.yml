@@ -16,6 +16,10 @@ services:
       APP_LOG_PASSWORD_RESET_TOKENS: "true"
       
       LOKI_URL: ${LOKI_URL:-http://loki:3100/loki/api/v1/push}
+      # Where Stripe Checkout redirects the browser back to after a payment (success/cancel) -
+      # see docs/stripe-payments.md. STRIPE_SECRET_KEY/STRIPE_WEBHOOK_SECRET come from
+      # bookingssystem/.env (env_file above), not here - same reasoning as the Supabase values.
+      APP_FRONTEND_URL: ${APP_FRONTEND_URL:-http://localhost:3000}
     ports:
       - "8080:8080"
 

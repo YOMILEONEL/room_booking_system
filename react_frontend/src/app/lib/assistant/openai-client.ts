@@ -13,6 +13,12 @@ const MODEL_NAME = "gpt-5-nano";
 // feature for 5+ minutes with no error and no way for the UI to recover (see docs/ai-agent.md).
 const REQUEST_TIMEOUT_MS = 20_000;
 
+// How many prior turns of the session are resent as context for each new question - like
+// Claude/ChatGPT in the browser, not a single stateless call. Capped rather than sending the
+// whole session so a long-running conversation doesn't grow the request (and the bill) without
+// bound; no summarization of anything older than this window (see docs/ai-agent.md).
+const MAX_CONTEXT_MESSAGES = 15;
+
 export type AssistantErrorCode =
   | "missing_api_key"
   | "app_quota_exceeded"
@@ -211,12 +217,18 @@ const SYSTEM_INSTRUCTION =
   "unterscheide sie über den Zeitraum, nicht über eine ID. Keine Markdown-Formatierung " +
   "(kein **fett**, keine #Überschriften).";
 
+export type AssistantContextMessage = { role: "USER" | "ASSISTANT"; content: string };
+
 // Runs the model, and if it asks for a tool call, executes it (server-side, scoped to the
 // caller's own accessToken) and feeds the result back - up to a few rounds, in case the model
 // chains two tool calls (e.g. bookings, then rooms) before it has enough to answer. A
 // create_booking/cancel_booking call short-circuits this immediately (see the "terminal" branch
 // below) instead of looping further - the model's role stops at proposing the action.
-export async function askAssistant(question: string, accessToken: string): Promise<AssistantResult> {
+export async function askAssistant(
+  question: string,
+  accessToken: string,
+  priorMessages: AssistantContextMessage[] = []
+): Promise<AssistantResult> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
     throw new AssistantError(
@@ -227,8 +239,20 @@ export async function askAssistant(question: string, accessToken: string): Promi
 
   const client = new OpenAI({ apiKey, timeout: REQUEST_TIMEOUT_MS, maxRetries: 1 });
 
+  // Only plain text turns are replayed as context - a pending_booking/pending_cancellation
+  // proposal from earlier is already saved to history as its human-readable summary text (see
+  // resultToLogText in api/assistant/route.ts), not as a tool call the model could re-execute,
+  // so this stays simple user/assistant alternation without reconstructing tool-call plumbing.
+  const context = priorMessages.slice(-MAX_CONTEXT_MESSAGES).map(
+    (m): ChatCompletionMessageParam => ({
+      role: m.role === "USER" ? "user" : "assistant",
+      content: m.content,
+    })
+  );
+
   const messages: ChatCompletionMessageParam[] = [
     { role: "system", content: SYSTEM_INSTRUCTION },
+    ...context,
     { role: "user", content: question },
   ];
 

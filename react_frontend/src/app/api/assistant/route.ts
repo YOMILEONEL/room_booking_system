@@ -2,7 +2,7 @@ import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { authOptions } from "../../lib/auth";
 import { askAssistant, AssistantError, type AssistantResult } from "../../lib/assistant/openai-client";
-import { logAssistantMessages } from "../../lib/assistant/tools";
+import { fetchSessionHistory, logAssistantMessages } from "../../lib/assistant/tools";
 
 const currency = new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" });
 
@@ -51,13 +51,27 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: `Frage ist zu lang (max. ${MAX_QUESTION_LENGTH} Zeichen).` }, { status: 400 });
   }
 
+  const sessionId = (body as { sessionId?: unknown })?.sessionId;
+  if (typeof sessionId !== "string" || !sessionId.trim()) {
+    return NextResponse.json({ error: "Keine Chat-Session ausgewählt." }, { status: 400 });
+  }
+
   try {
     const trimmedQuestion = question.trim();
-    const result = await askAssistant(trimmedQuestion, session.accessToken);
+
+    // Best-effort: a session that can't be loaded (e.g. a transient backend hiccup) shouldn't
+    // block the question - the model just answers without earlier context for this one turn.
+    const priorMessages = await fetchSessionHistory(sessionId, session.accessToken).catch((err) => {
+      console.error("[assistant] Verlauf konnte nicht geladen werden:", err);
+      return [];
+    });
+
+    const result = await askAssistant(trimmedQuestion, session.accessToken, priorMessages);
 
     // Best-effort: the person is waiting on the reply above, a logging hiccup shouldn't turn
     // into a 500 for an otherwise-successful answer.
     logAssistantMessages(
+      sessionId,
       [
         { role: "USER", content: trimmedQuestion },
         { role: "ASSISTANT", content: resultToLogText(result) },

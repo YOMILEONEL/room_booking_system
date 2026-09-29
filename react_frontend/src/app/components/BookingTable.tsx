@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { fetchBookings, deleteBooking, type Booking } from "../api/booking.api";
-import { confirmPayment } from "../api/payment.api";
+import { createCheckoutSession } from "../api/payment.api";
 import { fetchInvoicePdf } from "../api/invoice.api";
 import { extractErrorMessage } from "../api/apiClient";
 import { roomImages, defaultRoomImage } from "../lib/roomImages";
@@ -102,18 +102,19 @@ const BookingTable: React.FC = () => {
     }
   };
 
-  const handleConfirmPayment = async (paymentId: string) => {
+  const handlePayNow = async (paymentId: string) => {
     setConfirmingId(paymentId);
     setActionError(null);
     try {
-      await confirmPayment(paymentId);
-      await loadBookings();
+      const { url } = await createCheckoutSession(paymentId);
+      window.location.href = url;
     } catch (err) {
       console.error(err);
-      setActionError("Zahlung konnte nicht bestätigt werden.");
-    } finally {
+      setActionError(extractErrorMessage(err, "Bezahlvorgang konnte nicht gestartet werden."));
       setConfirmingId(null);
     }
+    // No `finally` resetting confirmingId on success - the browser is about to navigate away to
+    // Stripe, so there's no more UI here to un-disable.
   };
 
   if (loading) return <p className="text-text-muted text-sm">Lädt...</p>;
@@ -205,14 +206,13 @@ const BookingTable: React.FC = () => {
                   </Button>
                 )}
 
-                {isAdmin && payment && payment.status === "PENDING" && (
+                {!isAdmin && payment && payment.status === "PENDING" && (
                   <Button
-                    variant="secondary"
                     className="mt-2 text-xs py-2"
                     disabled={confirmingId === payment.id}
-                    onClick={() => handleConfirmPayment(payment.id)}
+                    onClick={() => handlePayNow(payment.id)}
                   >
-                    {confirmingId === payment.id ? "Wird bestätigt..." : "Zahlung bestätigen"}
+                    {confirmingId === payment.id ? "Weiterleitung..." : "Jetzt bezahlen"}
                   </Button>
                 )}
               </div>

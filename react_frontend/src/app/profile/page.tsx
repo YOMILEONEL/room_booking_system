@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import NavBar from "../components/NavBar";
 import Footer from "../components/Footer";
 import BookingTable from "../components/BookingTable";
@@ -16,6 +16,27 @@ import { Card, Button, TextInput, Alert } from "../components/ui";
 // customerType: some accounts have real firstName/lastName but a null customerType (rows
 // predating that field, or created outside /api/register), and gating on it made those show
 // their email forever with no way to fix it even though the name was right there.
+// Split out and wrapped in <Suspense> below: useSearchParams() opts the whole subtree it's
+// called in out of static rendering unless isolated like this - Next.js build fails otherwise
+// ("should be wrapped in a suspense boundary").
+function PaymentStatusBanner() {
+  const searchParams = useSearchParams();
+  const paymentStatus = searchParams.get("payment");
+
+  if (paymentStatus === "success") {
+    return (
+      <Alert variant="success">
+        Zahlung erfolgreich! Die Buchung wird in Kürze als bezahlt markiert - falls sie unten noch
+        als &quot;Zahlung offen&quot; angezeigt wird, lade die Seite in ein paar Sekunden neu.
+      </Alert>
+    );
+  }
+  if (paymentStatus === "cancelled") {
+    return <Alert variant="danger">Bezahlvorgang abgebrochen. Du kannst es jederzeit erneut versuchen.</Alert>;
+  }
+  return null;
+}
+
 function computeDisplayName(user: {
   email: string;
   organisationName?: string | null;
@@ -182,6 +203,10 @@ export default function ProfilePage() {
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 grid gap-8">
         <h1 className="text-xl font-bold">Mein Profil</h1>
+
+        <React.Suspense fallback={null}>
+          <PaymentStatusBanner />
+        </React.Suspense>
 
         <div className="grid gap-6 sm:grid-cols-2">
           <Card>

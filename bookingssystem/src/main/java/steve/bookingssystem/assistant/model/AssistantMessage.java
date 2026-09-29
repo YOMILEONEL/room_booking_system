@@ -24,6 +24,18 @@ public class AssistantMessage {
     @JoinColumn(name = "userId", nullable = false)
     private User user;
 
+    // No nullable=false here on purpose: this column was added after messages already existed
+    // in the database (from the earlier flat, non-session history), and a NOT NULL ALTER TABLE
+    // against a non-empty table fails under Hibernate's ddl-auto=update - same reasoning as
+    // Room.city/description. Every new message always sets it (see
+    // AssistantMessageServiceImpl.addMessages); old rows keep session=null and are simply no
+    // longer reachable through the session-scoped endpoints.
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    @ManyToOne
+    @JoinColumn(name = "sessionId")
+    private AssistantSession session;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private AssistantMessageRole role;

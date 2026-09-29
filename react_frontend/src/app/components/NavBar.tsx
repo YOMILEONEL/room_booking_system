@@ -6,6 +6,7 @@ import { useSession, signOut } from "next-auth/react";
 import { ConfirmDialog } from "./ui";
 import LogoMark from "./LogoMark";
 import BotIcon from "./BotIcon";
+import { deleteAssistantSessionIfUnused } from "../api/assistantSession.api";
 
 export default function NavBar() {
   const router = useRouter();
@@ -13,6 +14,14 @@ export default function NavBar() {
   const [confirmLogout, setConfirmLogout] = React.useState(false);
 
   const handleLogout = () => {
+    // Best-effort, fire-and-forget - logout must never wait on or fail because of this. Only
+    // deletes the session created at this login, and only if it was never actually chatted in
+    // (see AssistantSessionServiceImpl.deleteIfUnused) - a session the person did use is untouched.
+    if (session?.freshAssistantSessionId) {
+      deleteAssistantSessionIfUnused(session.freshAssistantSessionId).catch((err) =>
+        console.error("Ungenutzte Assistant-Session konnte nicht gelöscht werden:", err)
+      );
+    }
     signOut({ callbackUrl: "/" });
   };
 

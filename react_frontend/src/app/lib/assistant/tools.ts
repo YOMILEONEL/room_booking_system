@@ -37,15 +37,31 @@ export type AssistantMessageLogEntry = { role: "USER" | "ASSISTANT"; content: st
 // back at what they asked and proposed/did with the assistant, and when. Best-effort: a logging
 // failure must never break the actual chat reply the person is waiting for, so callers should
 // not await this inline without a catch (see api/assistant/route.ts).
-export async function logAssistantMessages(entries: AssistantMessageLogEntry[], accessToken: string): Promise<void> {
-  const res = await fetch(`${BACKEND_INTERNAL_URL}/assistant/history`, {
+export async function logAssistantMessages(
+  sessionId: string,
+  entries: AssistantMessageLogEntry[],
+  accessToken: string
+): Promise<void> {
+  const res = await fetch(`${BACKEND_INTERNAL_URL}/assistant/sessions/${sessionId}/history`, {
     method: "POST",
     headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
     body: JSON.stringify(entries),
   });
   if (!res.ok) {
-    throw new Error(`Backend-Aufruf /assistant/history schlug fehl: ${res.status}`);
+    throw new Error(`Backend-Aufruf /assistant/sessions/${sessionId}/history schlug fehl: ${res.status}`);
   }
+}
+
+// Prior turns of the session, fed back to the model as conversation context (see
+// openai-client.ts) - without this, every question was answered with no memory of earlier ones
+// in the same chat. Best-effort like the rest of this file's helpers: if this fails, the caller
+// (api/assistant/route.ts) just proceeds with an empty context instead of failing the question.
+export async function fetchSessionHistory(sessionId: string, accessToken: string): Promise<AssistantMessageLogEntry[]> {
+  const messages = await backendGet<{ role: "USER" | "ASSISTANT"; content: string }[]>(
+    `/assistant/sessions/${sessionId}/history`,
+    accessToken
+  );
+  return messages.map((m) => ({ role: m.role, content: m.content }));
 }
 
 // Same endpoint the "Meine Buchungen" page already uses (GET /booking/getAll) - the backend

@@ -7,20 +7,25 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import steve.bookingssystem.payment.model.CheckoutSessionResponse;
 import steve.bookingssystem.payment.model.PaymentResponseDTO;
 import steve.bookingssystem.payment.service.PaymentService;
+import steve.bookingssystem.payment.service.StripeService;
 
 import java.util.UUID;
 
 @RestController
 @RequestMapping("/payment")
-@Tag(name = "Zahlungen", description = "Zahlung je Buchung (offen/bezahlt) - Bestätigung nur durch Admin")
+@Tag(name = "Zahlungen", description = "Zahlung je Buchung (offen/bezahlt) - siehe docs/stripe-payments.md für den Bezahlvorgang")
 @SecurityRequirement(name = "bearerAuth")
 public class PaymentController {
 
     @Autowired
     private PaymentService paymentService;
+    @Autowired
+    private StripeService stripeService;
 
     @GetMapping("/booking/{bookingId}")
     @Operation(summary = "Zahlung zu einer Buchung abrufen")
@@ -33,9 +38,29 @@ public class PaymentController {
         return paymentService.getForBooking(bookingId);
     }
 
+    @PostMapping("/{id}/checkout-session")
+    @ResponseStatus(HttpStatus.CREATED)
+    @Operation(summary = "Stripe-Checkout starten",
+            description = "Legt eine Stripe Checkout Session für diese Zahlung an und liefert die URL der " +
+                    "von Stripe gehosteten Bezahlseite - die aufrufende Seite leitet den Browser dorthin " +
+                    "weiter. Die Zahlung wird erst durch den Stripe-Webhook auf PAID gesetzt, nicht durch " +
+                    "diesen Aufruf selbst (siehe docs/stripe-payments.md).")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "Checkout-URL geliefert"),
+            @ApiResponse(responseCode = "403", description = "Fremde Buchung, kein Admin"),
+            @ApiResponse(responseCode = "404", description = "Zahlung nicht gefunden"),
+            @ApiResponse(responseCode = "409", description = "Zahlung bereits bestätigt")
+    })
+    public CheckoutSessionResponse createCheckoutSession(@Parameter(description = "ID der Zahlung") @PathVariable UUID id) {
+        return new CheckoutSessionResponse(stripeService.createCheckoutSessionUrl(id));
+    }
+
     @PutMapping("/{id}/confirm")
-    @Operation(summary = "Zahlung bestätigen (nur Admin)",
-            description = "Setzt die Zahlung auf PAID und erzeugt dabei automatisch eine Rechnung.")
+    @Operation(summary = "Zahlung manuell bestätigen (nur Admin, technischer Override)",
+            description = "Setzt die Zahlung auf PAID und erzeugt dabei automatisch eine Rechnung - genau " +
+                    "wie der Stripe-Webhook. Im Normalbetrieb übernimmt Stripe das automatisch; dieser " +
+                    "Endpunkt ist ein bewusst nicht in der Admin-Oberfläche verdrahteter Fallback für Fälle, " +
+                    "die Stripe nicht abdeckt (z. B. eine vor Ort bar bezahlte Buchung).")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Zahlung bestätigt, Rechnung erzeugt"),
             @ApiResponse(responseCode = "403", description = "Kein Admin-Konto"),
