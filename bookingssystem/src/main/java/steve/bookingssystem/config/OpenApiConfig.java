@@ -6,7 +6,13 @@ import io.swagger.v3.oas.annotations.info.Contact;
 import io.swagger.v3.oas.annotations.info.Info;
 import io.swagger.v3.oas.annotations.security.SecurityScheme;
 import io.swagger.v3.oas.annotations.servers.Server;
+import io.swagger.v3.oas.models.responses.ApiResponse;
+import io.swagger.v3.oas.models.responses.ApiResponses;
+import org.springdoc.core.customizers.OpenApiCustomizer;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+
+import java.util.Set;
 
 // Publishes /v3/api-docs (raw OpenAPI JSON) and /swagger-ui/index.html (interactive docs) -
 // springdoc builds both from the @Tag/@Operation/@ApiResponse annotations on the controllers
@@ -36,4 +42,38 @@ import org.springframework.context.annotation.Configuration;
 )
 @Configuration
 public class OpenApiConfig {
+
+    // Paths that SecurityConfig permits without a token - these never answer 401, so the
+    // customizer below must not document it for them.
+    private static final Set<String> PUBLIC_PATHS = Set.of(
+            "/api/register", "/api/login", "/api/refresh", "/api/logout",
+            "/api/forgot-password", "/api/reset-password", "/payment/stripe/webhook");
+
+    // Every protected endpoint can answer 401 (missing/invalid/expired token, see
+    // JsonAuthenticationEntryPoint), but annotating each controller method by hand is easy to
+    // forget. This adds a "401" response to every operation on a non-public path that does not
+    // declare one itself, so existing @ApiResponse annotations stay untouched and nothing is
+    // listed twice.
+    @Bean
+    public OpenApiCustomizer unauthorizedResponseCustomizer() {
+        return openApi -> {
+            if (openApi.getPaths() == null) {
+                return;
+            }
+            openApi.getPaths().forEach((path, item) -> {
+                if (PUBLIC_PATHS.contains(path)) {
+                    return;
+                }
+                item.readOperations().forEach(operation -> {
+                    if (operation.getResponses() == null) {
+                        operation.setResponses(new ApiResponses());
+                    }
+                    if (!operation.getResponses().containsKey("401")) {
+                        operation.getResponses().addApiResponse("401",
+                                new ApiResponse().description("Nicht eingeloggt oder Token ungültig"));
+                    }
+                });
+            });
+        };
+    }
 }
