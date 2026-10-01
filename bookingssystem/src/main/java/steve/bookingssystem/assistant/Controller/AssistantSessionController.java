@@ -51,6 +51,7 @@ public class AssistantSessionController {
                     "diesem Login angelegte Session auf, ohne eine tatsächlich genutzte Unterhaltung zu riskieren.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Gelöscht (oder, mit onlyIfUnused=true, No-op)"),
+            @ApiResponse(responseCode = "401", description = "Nicht eingeloggt oder Token ungültig"),
             @ApiResponse(responseCode = "403", description = "Session gehört nicht der anfragenden Person (nur ohne onlyIfUnused)"),
             @ApiResponse(responseCode = "404", description = "Session nicht gefunden (nur ohne onlyIfUnused)")
     })

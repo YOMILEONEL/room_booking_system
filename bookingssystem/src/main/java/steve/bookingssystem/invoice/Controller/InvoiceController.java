@@ -36,6 +36,7 @@ public class InvoiceController {
             description = "Nur vorhanden, sobald ein Admin die Zahlung der Buchung bestätigt hat.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Rechnungsdaten geliefert"),
+            @ApiResponse(responseCode = "401", description = "Nicht eingeloggt oder Token ungültig"),
             @ApiResponse(responseCode = "403", description = "Fremde Buchung, kein Admin"),
             @ApiResponse(responseCode = "404", description = "Buchung oder Rechnung nicht gefunden")
     })
@@ -48,6 +49,7 @@ public class InvoiceController {
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "PDF-Datei",
                     content = @Content(mediaType = MediaType.APPLICATION_PDF_VALUE, schema = @Schema(type = "string", format = "binary"))),
+            @ApiResponse(responseCode = "401", description = "Nicht eingeloggt oder Token ungültig"),
             @ApiResponse(responseCode = "403", description = "Fremde Buchung, kein Admin"),
             @ApiResponse(responseCode = "404", description = "Buchung oder Rechnung nicht gefunden")
     })

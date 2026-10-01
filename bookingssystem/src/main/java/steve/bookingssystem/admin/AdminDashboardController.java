@@ -28,6 +28,7 @@ public class AdminDashboardController {
                     "Räume und aktivste Kunden.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Kennzahlen geliefert"),
+            @ApiResponse(responseCode = "401", description = "Nicht eingeloggt oder Token ungültig"),
             @ApiResponse(responseCode = "403", description = "Kein Admin-Konto")
     })
     public AdminDashboardDto getDashboard() {

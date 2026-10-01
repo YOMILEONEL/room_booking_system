@@ -32,6 +32,7 @@ public class AssistantMessageController {
                     "chronologisch aufsteigend sortiert.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Verlauf geliefert (ggf. leer)"),
+            @ApiResponse(responseCode = "401", description = "Nicht eingeloggt oder Token ungültig"),
             @ApiResponse(responseCode = "403", description = "Session gehört nicht der anfragenden Person"),
             @ApiResponse(responseCode = "404", description = "Session nicht gefunden")
     })
@@ -48,6 +49,7 @@ public class AssistantMessageController {
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Nachrichten gespeichert"),
             @ApiResponse(responseCode = "400", description = "Ungültige Nachricht (z. B. leerer Inhalt)"),
+            @ApiResponse(responseCode = "401", description = "Nicht eingeloggt oder Token ungültig"),
             @ApiResponse(responseCode = "403", description = "Session gehört nicht der anfragenden Person"),
             @ApiResponse(responseCode = "404", description = "Session nicht gefunden")
     })

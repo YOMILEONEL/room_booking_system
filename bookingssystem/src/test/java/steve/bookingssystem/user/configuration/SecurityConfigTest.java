@@ -7,6 +7,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import steve.bookingssystem.security.JsonAuthenticationEntryPoint;
 import steve.bookingssystem.security.JwtAuthFilter;
 import steve.bookingssystem.security.RateLimitFilter;
 import steve.bookingssystem.user.service.CustomUserDetailsService;
@@ -24,9 +25,11 @@ class SecurityConfigTest {
     private JwtAuthFilter jwtAuthFilter;
     @Mock
     private RateLimitFilter rateLimitFilter;
+    @Mock
+    private JsonAuthenticationEntryPoint authenticationEntryPoint;
 
     private CorsConfiguration corsConfigFor(String allowedOrigins) {
-        SecurityConfig securityConfig = new SecurityConfig(userDetailsService, jwtAuthFilter, rateLimitFilter);
+        SecurityConfig securityConfig = new SecurityConfig(userDetailsService, jwtAuthFilter, rateLimitFilter, authenticationEntryPoint);
         ReflectionTestUtils.setField(securityConfig, "allowedOrigins", allowedOrigins);
 
         UrlBasedCorsConfigurationSource source =

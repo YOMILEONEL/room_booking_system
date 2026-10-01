@@ -42,6 +42,19 @@ export async function fetchRoomById(id: string): Promise<Room> {
   return apiFetch<Room>(`${BASE}/${id}`);
 }
 
+export type BookedPeriod = {
+  startTime: string; // ISO "YYYY-MM-DD"
+  endTime: string; // ISO "YYYY-MM-DD"
+};
+
+export async function getBookedPeriods(roomId: string, from?: string, to?: string): Promise<BookedPeriod[]> {
+  const params = new URLSearchParams();
+  if (from) params.set("from", from);
+  if (to) params.set("to", to);
+  const query = params.toString();
+  return apiFetch<BookedPeriod[]>(`${BASE}/${roomId}/booked-periods${query ? `?${query}` : ""}`);
+}
+
 export async function createRoom(payload: CreateRoomRequest): Promise<Room> {
   return apiFetch<Room>(`${BASE}/save`, { method: "POST", body: payload });
 }

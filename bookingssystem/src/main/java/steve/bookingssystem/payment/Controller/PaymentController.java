@@ -31,6 +31,7 @@ public class PaymentController {
     @Operation(summary = "Zahlung zu einer Buchung abrufen")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Zahlung geliefert"),
+            @ApiResponse(responseCode = "401", description = "Nicht eingeloggt oder Token ungültig"),
             @ApiResponse(responseCode = "403", description = "Fremde Buchung, kein Admin"),
             @ApiResponse(responseCode = "404", description = "Buchung oder Zahlung nicht gefunden")
     })
@@ -47,6 +48,7 @@ public class PaymentController {
                     "diesen Aufruf selbst (siehe docs/stripe-payments.md).")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Checkout-URL geliefert"),
+            @ApiResponse(responseCode = "401", description = "Nicht eingeloggt oder Token ungültig"),
             @ApiResponse(responseCode = "403", description = "Fremde Buchung, kein Admin"),
             @ApiResponse(responseCode = "404", description = "Zahlung nicht gefunden"),
             @ApiResponse(responseCode = "409", description = "Zahlung bereits bestätigt")
@@ -63,6 +65,7 @@ public class PaymentController {
                     "die Stripe nicht abdeckt (z. B. eine vor Ort bar bezahlte Buchung).")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Zahlung bestätigt, Rechnung erzeugt"),
+            @ApiResponse(responseCode = "401", description = "Nicht eingeloggt oder Token ungültig"),
             @ApiResponse(responseCode = "403", description = "Kein Admin-Konto"),
             @ApiResponse(responseCode = "404", description = "Zahlung nicht gefunden"),
             @ApiResponse(responseCode = "409", description = "Zahlung bereits bestätigt")

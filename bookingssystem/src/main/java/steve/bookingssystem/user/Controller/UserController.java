@@ -38,6 +38,7 @@ public class UserController {
                     "bevor gelöscht wird.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Konto gelöscht"),
+            @ApiResponse(responseCode = "401", description = "Nicht eingeloggt oder Token ungültig"),
             @ApiResponse(responseCode = "403", description = "Kein Admin-Konto"),
             @ApiResponse(responseCode = "404", description = "Konto nicht gefunden"),
             @ApiResponse(responseCode = "409", description = "Konto hat noch verknüpfte Daten (z. B. Buchungen)")
@@ -51,6 +52,7 @@ public class UserController {
     @Operation(summary = "Konto abrufen", description = "Nur das eigene Konto oder, als Admin, jedes beliebige.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Konto geliefert"),
+            @ApiResponse(responseCode = "401", description = "Nicht eingeloggt oder Token ungültig"),
             @ApiResponse(responseCode = "403", description = "Fremdes Konto, kein Admin"),
             @ApiResponse(responseCode = "404", description = "Konto nicht gefunden")
     })
@@ -63,6 +65,7 @@ public class UserController {
     @Operation(summary = "Alle Konten auflisten (nur Admin)")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Kontoliste geliefert"),
+            @ApiResponse(responseCode = "401", description = "Nicht eingeloggt oder Token ungültig"),
             @ApiResponse(responseCode = "403", description = "Kein Admin-Konto")
     })
     public List<UserDTO> getUsers() {
@@ -74,6 +77,7 @@ public class UserController {
     @Operation(summary = "Eigenes Profil bearbeiten", description = "Nur das eigene Konto oder, als Admin, jedes beliebige.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Konto aktualisiert"),
+            @ApiResponse(responseCode = "401", description = "Nicht eingeloggt oder Token ungültig"),
             @ApiResponse(responseCode = "403", description = "Fremdes Konto, kein Admin"),
             @ApiResponse(responseCode = "404", description = "Konto nicht gefunden")
     })

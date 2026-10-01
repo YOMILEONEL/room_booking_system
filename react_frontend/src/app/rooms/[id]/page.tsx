@@ -11,6 +11,8 @@ import RoomGallery from "../../components/RoomGallery";
 import {
   fetchRoomById,
   fetchRoomImages,
+  getBookedPeriods,
+  type BookedPeriod,
   uploadRoomImage,
   deleteRoomImage,
   reorderRoomImages,
@@ -69,6 +71,38 @@ export default function RoomDetailPage() {
         setError("Raum konnte nicht geladen werden.");
       });
   }, [id, status]);
+
+  // Loading state is derived: a result only counts when it belongs to the current room/version.
+  const [periodsVersion, setPeriodsVersion] = React.useState(0);
+  const [periodsResult, setPeriodsResult] = React.useState<{
+    key: string;
+    periods: BookedPeriod[];
+    error: boolean;
+  } | null>(null);
+  const periodsKey = `${id}:${periodsVersion}`;
+
+  React.useEffect(() => {
+    if (status !== "authenticated") return;
+    let cancelled = false;
+    const key = `${id}:${periodsVersion}`;
+
+    getBookedPeriods(id)
+      .then((periods) => {
+        if (!cancelled) setPeriodsResult({ key, periods, error: false });
+      })
+      .catch((err) => {
+        console.error("Fehler beim Laden der belegten Zeiträume:", err);
+        if (!cancelled) setPeriodsResult({ key, periods: [], error: true });
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [id, status, periodsVersion]);
+
+  const periodsLoading = periodsResult?.key !== periodsKey;
+  const periodsError = !periodsLoading && periodsResult?.error === true;
+  const bookedPeriods = periodsResult?.periods ?? [];
 
   const loadImages = React.useCallback(() => {
     fetchRoomImages(id)
@@ -415,7 +449,32 @@ export default function RoomDetailPage() {
               </Card>
             )}
 
-            <BookingAdd fixedRoomId={room.id} fixedRoomName={room.name} />
+            <Card>
+              <h2 className="text-lg font-bold mb-3">Belegte Zeiträume (nächste 90 Tage)</h2>
+              {periodsLoading && <p className="text-text-muted text-sm">Lädt...</p>}
+              {periodsError && (
+                <Alert variant="danger">Belegte Zeiträume konnten nicht geladen werden.</Alert>
+              )}
+              {!periodsLoading && !periodsError && bookedPeriods.length === 0 && (
+                <p className="text-text-muted text-sm">Keine Buchungen in den nächsten 90 Tagen</p>
+              )}
+              {!periodsLoading && !periodsError && bookedPeriods.length > 0 && (
+                <ul className="grid gap-1.5 text-text-secondary">
+                  {bookedPeriods.map((p) => (
+                    <li key={`${p.startTime}_${p.endTime}`}>
+                      {formatLocalDate(p.startTime)} – {formatLocalDate(p.endTime)}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Card>
+
+            <BookingAdd
+              fixedRoomId={room.id}
+              fixedRoomName={room.name}
+              bookedPeriods={periodsError ? [] : bookedPeriods}
+              onBooked={() => setPeriodsVersion((v) => v + 1)}
+            />
           </>
         )}
       </div>

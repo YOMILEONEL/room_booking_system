@@ -3,3 +3,6 @@
 
 # Docker CLI output redirected to a file during local debugging
 compose-up.log
+
+# Orchestrator-Pipeline (Plan/Summary der /feature-Läufe)
+.work/
