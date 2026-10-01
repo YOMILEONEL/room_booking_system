@@ -3,11 +3,21 @@
 import React, { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { createBooking, createBookingForCustomer } from "../api/booking.api";
-import { fetchRooms, type BookedPeriod, type Room } from "../api/room.api";
+import { fetchRooms, getBookedPeriods, type BookedPeriod, type Room } from "../api/room.api";
 import { extractErrorMessage } from "../api/apiClient";
 import { Card, Button, TextInput, Select, Alert } from "./ui";
 
 const currency = new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" });
+
+const MAX_CHECK_DAYS = 366;
+const CHECK_DEBOUNCE_MS = 300;
+
+// UTC-safe day difference between two ISO "YYYY-MM-DD" strings.
+const daysBetween = (from: string, to: string): number => {
+  const [fy, fm, fd] = from.split("-").map(Number);
+  const [ty, tm, td] = to.split("-").map(Number);
+  return Math.round((Date.UTC(ty, tm - 1, td) - Date.UTC(fy, fm - 1, fd)) / 86_400_000);
+};
 
 interface BookingAddProps {
   fixedRoomId?: string;
@@ -40,12 +50,53 @@ const BookingAdd: React.FC<BookingAddProps> = ({ fixedRoomId, fixedRoomName, onB
       .catch((err) => console.error("Fehler beim Laden der Räume:", err));
   }, [fixedRoomId]);
 
+  const [checkVersion, setCheckVersion] = useState(0);
+  const [checkResult, setCheckResult] = useState<{
+    key: string;
+    periods: BookedPeriod[];
+    error: boolean;
+  } | null>(null);
+
+  const rangeValid = !!fixedRoomId && !!startTime && !!endTime && endTime >= startTime;
+  const rangeTooLong = rangeValid && daysBetween(startTime, endTime) > MAX_CHECK_DAYS;
+  const checkKey = rangeValid && !rangeTooLong ? `${fixedRoomId}|${startTime}|${endTime}|${checkVersion}`
+      : null;
+
+  useEffect(() => {
+    if (!fixedRoomId || checkKey === null) return;
+    let cancelled = false;
+    const key = checkKey;
+
+    const timer = setTimeout(() => {
+      getBookedPeriods(fixedRoomId, startTime, endTime)
+        .then((periods) => {
+          if (!cancelled) setCheckResult({ key, periods, error: false });
+        })
+        .catch((err) => {
+          console.error("Fehler bei der Verfügbarkeitsprüfung:", err);
+          if (!cancelled) setCheckResult({ key, periods: [], error: true });
+        });
+    }, CHECK_DEBOUNCE_MS);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [fixedRoomId, checkKey, startTime, endTime]);
+
+  // Loading is derived: a result only counts when its key matches the current one.
+  const currentResult = checkKey !== null && checkResult?.key === checkKey ? checkResult : null;
+  const checking = checkKey !== null && currentResult === null;
+  const checkFailed = currentResult?.error === true;
+  const remoteConflict = (currentResult?.periods.length ?? 0) > 0;
+
   // ISO "YYYY-MM-DD" strings compare correctly lexicographically; bounds are inclusive.
   const hasConflict =
-    !!fixedRoomId &&
-    !!startTime &&
-    !!endTime &&
-    (bookedPeriods ?? []).some((p) => startTime <= p.endTime && endTime >= p.startTime);
+    (!!fixedRoomId &&
+      !!startTime &&
+      !!endTime &&
+      (bookedPeriods ?? []).some((p) => startTime <= p.endTime && endTime >= p.startTime)) ||
+    remoteConflict;
 
   const resetForm = () => {
     setRoomId(fixedRoomId ?? "");
@@ -83,6 +134,7 @@ const BookingAdd: React.FC<BookingAddProps> = ({ fixedRoomId, fixedRoomName, onB
             : `Buchung für ${customerEmail.trim()} wurde angelegt.`
         );
         resetForm();
+        setCheckVersion((v) => v + 1);
         onBooked?.();
       } catch (err) {
         console.error("Fehler beim Anlegen der Kundenbuchung:", err);
@@ -117,6 +169,7 @@ const BookingAdd: React.FC<BookingAddProps> = ({ fixedRoomId, fixedRoomName, onB
           : "Buchung wurde erfolgreich angelegt."
       );
       resetForm();
+      setCheckVersion((v) => v + 1);
       onBooked?.();
     } catch (err) {
       console.error("Fehler beim Anlegen der Buchung:", err);
@@ -188,6 +241,17 @@ const BookingAdd: React.FC<BookingAddProps> = ({ fixedRoomId, fixedRoomName, onB
         />
 
         <div className="sm:col-span-2 grid gap-3">
+          <div role="status" aria-live="polite" className="grid gap-3">
+            {checking && <p className="text-sm text-gray-500">Verfügbarkeit wird geprüft…</p>}
+            {checkFailed && (
+              <p className="text-sm text-gray-500">
+                Verfügbarkeit konnte nicht geprüft werden. Die Buchung wird beim Absenden geprüft.
+              </p>
+            )}
+            {rangeTooLong && (
+              <p className="text-sm text-gray-500">Zeitraum zu lang für eine Vorabprüfung.</p>
+            )}
+          </div>
           {hasConflict && (
             <Alert variant="danger">
               Der gewählte Zeitraum überschneidet sich mit einer bestehenden Buchung.
