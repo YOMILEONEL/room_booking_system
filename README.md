@@ -4,6 +4,13 @@ Fullstack-Anwendung zur Verwaltung und Buchung von Besprechungs-, Veranstaltungs
 Schulungsräumen. Backend (Spring Boot) und Frontend (Next.js) sind getrennte Anwendungen, die über
 eine REST-API kommunizieren und gemeinsam per Docker Compose betrieben werden.
 
+<p align="center">
+  <a href="docs/diagram.png">
+    <img src="docs/diagram.png" alt="Architekturdiagramm von Spacio: Administrator und Kunde nutzen die Next.js-Webanwendung, deren API-Clients per REST die Backend-Bereiche Räume und Buchungen, Identität und Zugriff sowie Zahlungen und Reporting ansprechen; angebunden sind PostgreSQL, Supabase Storage, Stripe Checkout und für den KI-Assistenten die OpenAI API." width="100%">
+  </a>
+</p>
+<p align="center"><sub>Architekturüberblick. Klicken für die volle Auflösung.</sub></p>
+
 > Ausführlichere Dokumentation liegt im Ordner [`docs/`](docs/README.md):
 > Architektur- und Feature-Überblick in [`docs/README.md`](docs/README.md),
 > Anforderungen in [`docs/requirements-engineering.md`](docs/requirements-engineering.md),
