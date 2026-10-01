@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import steve.bookingssystem.security.AuthorizationService;
 import steve.bookingssystem.user.model.UpdateUserRequest;
 import steve.bookingssystem.user.model.User;
@@ -84,6 +85,37 @@ public class UserController {
     public void updateUser(@Parameter(description = "ID des Kontos") @PathVariable UUID id, @Valid @RequestBody UpdateUserRequest request) {
         authorizationService.requireOwnerOrAdmin(id);
         userService.updateUser(id, request);
+    }
+
+    @PostMapping("/{id}/profile-image")
+    @Operation(summary = "Profilbild hochladen oder ersetzen",
+            description = "Multipart-Upload (Feld \"file\"), maximal 5 MB. Nur das eigene Konto oder, als Admin, jedes beliebige. " +
+                    "Ein vorhandenes Bild wird ersetzt (altes Objekt wird best effort gelöscht).")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Profilbild gespeichert, aktualisiertes Konto geliefert"),
+            @ApiResponse(responseCode = "400", description = "Keine, leere oder ungültige Bilddatei"),
+            @ApiResponse(responseCode = "401", description = "Nicht eingeloggt oder Token ungültig"),
+            @ApiResponse(responseCode = "403", description = "Fremdes Konto, kein Admin"),
+            @ApiResponse(responseCode = "404", description = "Konto nicht gefunden")
+    })
+    public UserDTO uploadProfileImage(@Parameter(description = "ID des Kontos") @PathVariable UUID id,
+                                      @RequestParam("file") MultipartFile file) {
+        authorizationService.requireOwnerOrAdmin(id);
+        return userService.uploadProfileImage(id, file);
+    }
+
+    @DeleteMapping("/{id}/profile-image")
+    @Operation(summary = "Profilbild entfernen", description = "Nur das eigene Konto oder, als Admin, jedes beliebige.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Profilbild entfernt, aktualisiertes Konto (profileImageUrl = null) geliefert"),
+            @ApiResponse(responseCode = "400", description = "Ungültige Anfrage"),
+            @ApiResponse(responseCode = "401", description = "Nicht eingeloggt oder Token ungültig"),
+            @ApiResponse(responseCode = "403", description = "Fremdes Konto, kein Admin"),
+            @ApiResponse(responseCode = "404", description = "Konto nicht gefunden")
+    })
+    public UserDTO removeProfileImage(@Parameter(description = "ID des Kontos") @PathVariable UUID id) {
+        authorizationService.requireOwnerOrAdmin(id);
+        return userService.removeProfileImage(id);
     }
 
 

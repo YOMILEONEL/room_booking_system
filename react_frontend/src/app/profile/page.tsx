@@ -6,9 +6,19 @@ import { useRouter, useSearchParams } from "next/navigation";
 import NavBar from "../components/NavBar";
 import Footer from "../components/Footer";
 import BookingTable from "../components/BookingTable";
-import { fetchUser, updateUser, type User } from "../api/user.api";
+import {
+  fetchUser,
+  updateUser,
+  uploadProfileImage,
+  deleteProfileImage,
+  type User,
+} from "../api/user.api";
 import { extractErrorMessage } from "../api/apiClient";
-import { Card, Button, TextInput, Alert } from "../components/ui";
+import { Card, Button, TextInput, Alert, ConfirmDialog } from "../components/ui";
+import Avatar from "../components/Avatar";
+
+const ALLOWED_IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp"];
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
 // Mirrors the backend's User.getDisplayName() (steve.bookingssystem.user.model.User) - used
 // right after a save to refresh the NextAuth session immediately (see update() call below),
@@ -75,6 +85,11 @@ export default function ProfilePage() {
   const [passwordError, setPasswordError] = React.useState<string | null>(null);
   const [passwordSuccess, setPasswordSuccess] = React.useState<string | null>(null);
   const [savingPassword, setSavingPassword] = React.useState(false);
+
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [imageBusy, setImageBusy] = React.useState(false);
+  const [imageError, setImageError] = React.useState<string | null>(null);
+  const [confirmRemoveImage, setConfirmRemoveImage] = React.useState(false);
 
   React.useEffect(() => {
     if (status === "unauthenticated") {
@@ -156,7 +171,11 @@ export default function ProfilePage() {
       // jeder Backend-Call mit der alten E-Mail fehl, bis das Token automatisch abläuft.
       // displayName wird im selben Aufruf mitgeschickt, sonst zeigt die NavBar bis zum
       // nächsten Login weiter den alten Namen bzw. die E-Mail-Adresse.
-      await update({ email: trimmedEmail, displayName: computeDisplayName(updatedDetails) });
+      await update({
+        email: trimmedEmail,
+        displayName: computeDisplayName(updatedDetails),
+        firstName: updatedDetails.firstName?.trim() || null,
+      });
       setEmailSuccess("Angaben wurden aktualisiert.");
       setEditEmail(false);
     } catch (err) {
@@ -164,6 +183,63 @@ export default function ProfilePage() {
       setEmailError(extractErrorMessage(err, "Angaben konnten nicht gespeichert werden."));
     } finally {
       setSavingEmail(false);
+    }
+  };
+
+  const profileImageUrl = userDetails?.profileImageUrl ?? null;
+  const avatarName =
+    userDetails?.firstName?.trim() || currentDisplayName || session?.user?.email || "";
+
+  const handleImageSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !userId) return;
+    setImageError(null);
+
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      setImageError("Ungültiges Dateiformat. Erlaubt sind PNG, JPEG und WebP.");
+      return;
+    }
+    if (file.size > MAX_IMAGE_BYTES) {
+      setImageError("Die Datei ist zu groß. Das Bild darf höchstens 5 MB groß sein.");
+      return;
+    }
+
+    setImageBusy(true);
+    try {
+      const updated = await uploadProfileImage(userId, file);
+      setUserDetails((prev) => (prev ? { ...prev, profileImageUrl: updated.profileImageUrl } : updated));
+      try {
+        await update({ profileImageUrl: updated.profileImageUrl ?? null });
+      } catch (sessionErr) {
+        console.error("Session-Aktualisierung nach Upload fehlgeschlagen:", sessionErr);
+      }
+    } catch (err) {
+      console.error("Fehler beim Hochladen des Profilbilds:", err);
+      setImageError(extractErrorMessage(err, "Profilbild konnte nicht hochgeladen werden."));
+    } finally {
+      setImageBusy(false);
+    }
+  };
+
+  const handleRemoveImage = async () => {
+    setConfirmRemoveImage(false);
+    if (!userId) return;
+    setImageError(null);
+    setImageBusy(true);
+    try {
+      await deleteProfileImage(userId);
+      setUserDetails((prev) => (prev ? { ...prev, profileImageUrl: null } : prev));
+      try {
+        await update({ profileImageUrl: null });
+      } catch (sessionErr) {
+        console.error("Session-Aktualisierung nach Entfernen fehlgeschlagen:", sessionErr);
+      }
+    } catch (err) {
+      console.error("Fehler beim Entfernen des Profilbilds:", err);
+      setImageError(extractErrorMessage(err, "Profilbild konnte nicht entfernt werden."));
+    } finally {
+      setImageBusy(false);
     }
   };
 
@@ -207,6 +283,56 @@ export default function ProfilePage() {
         <React.Suspense fallback={null}>
           <PaymentStatusBanner />
         </React.Suspense>
+
+        <Card>
+          <h2 className="text-lg font-bold mb-4">Profilbild</h2>
+          <div className="flex flex-wrap items-center gap-5">
+            <Avatar src={profileImageUrl} name={avatarName} size={96} decorative={false} />
+            <div className="grid gap-2">
+              <div className="flex flex-wrap gap-3">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  className="hidden"
+                  onChange={handleImageSelected}
+                />
+                <Button
+                  type="button"
+                  disabled={imageBusy || !userId}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  {imageBusy ? "Wird verarbeitet..." : "Bild hochladen"}
+                </Button>
+                {profileImageUrl && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={imageBusy}
+                    onClick={() => setConfirmRemoveImage(true)}
+                  >
+                    Entfernen
+                  </Button>
+                )}
+              </div>
+              <p className="text-xs text-text-muted">PNG, JPEG oder WebP, höchstens 5 MB.</p>
+            </div>
+          </div>
+          {imageError && (
+            <div className="mt-3">
+              <Alert variant="danger">{imageError}</Alert>
+            </div>
+          )}
+        </Card>
+
+        <ConfirmDialog
+          open={confirmRemoveImage}
+          title="Profilbild entfernen"
+          message="Möchtest du dein Profilbild wirklich entfernen?"
+          confirmLabel="Entfernen"
+          onConfirm={handleRemoveImage}
+          onCancel={() => setConfirmRemoveImage(false)}
+        />
 
         <div className="grid gap-6 sm:grid-cols-2">
           <Card>

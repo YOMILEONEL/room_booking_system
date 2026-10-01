@@ -6,6 +6,7 @@ import { useSession, signOut } from "next-auth/react";
 import { ConfirmDialog } from "./ui";
 import LogoMark from "./LogoMark";
 import BotIcon from "./BotIcon";
+import Avatar from "./Avatar";
 import { deleteAssistantSessionIfUnused } from "../api/assistantSession.api";
 
 export default function NavBar() {
@@ -24,6 +25,12 @@ export default function NavBar() {
     }
     signOut({ callbackUrl: "/" });
   };
+
+  const navName =
+    session?.user?.firstName?.trim() ||
+    session?.user?.displayName?.trim() ||
+    session?.user?.email?.split("@")[0] ||
+    "";
 
   return (
     <header className="sticky top-0 z-50 bg-card/95 backdrop-blur border-b border-border-subtle">
@@ -52,12 +59,6 @@ export default function NavBar() {
               >
                 Räume
               </Link>
-              <Link
-                href="/profile"
-                className="px-3 py-2 rounded-lg text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-black/[0.04] transition-colors"
-              >
-                Profil
-              </Link>
               {session?.user?.role !== "ADMIN" && (
                 <Link
                   href="/assistant"
@@ -75,9 +76,14 @@ export default function NavBar() {
                   Verwaltung
                 </Link>
               )}
-              <span className="hidden sm:inline text-sm text-text-muted px-1">
-                {session.user?.displayName ?? session.user?.email}
-              </span>
+              <Link
+                href="/profile"
+                aria-label={`${navName} – Profil öffnen`}
+                className="flex items-center gap-2 px-2 sm:px-3 py-1.5 rounded-lg text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-black/[0.04] transition-colors"
+              >
+                <Avatar src={session.user?.profileImageUrl} name={navName} size={28} />
+                <span className="hidden sm:inline max-w-[10rem] truncate">{navName}</span>
+              </Link>
               <button
                 onClick={() => setConfirmLogout(true)}
                 className="px-3.5 py-2 rounded-lg text-sm font-semibold bg-black/[0.06] hover:bg-black/[0.1] transition-colors"

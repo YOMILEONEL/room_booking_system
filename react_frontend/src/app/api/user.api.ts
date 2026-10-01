@@ -14,6 +14,7 @@ export type User = {
   firstName?: string | null;
   lastName?: string | null;
   phoneNumber?: string | null;
+  profileImageUrl: string | null;
 };
 
 export type UpdateUserRequest = {
@@ -35,6 +36,16 @@ export async function fetchAllUsers(): Promise<User[]> {
 
 export async function updateUser(id: string, payload: UpdateUserRequest): Promise<void> {
   await apiFetch<void>(`${BASE}/update/${id}`, { method: "PUT", body: payload });
+}
+
+export async function uploadProfileImage(userId: string, file: File): Promise<User> {
+  const formData = new FormData();
+  formData.append("file", file);
+  return apiFetch<User>(`${BASE}/${userId}/profile-image`, { method: "POST", body: formData });
+}
+
+export async function deleteProfileImage(userId: string): Promise<User> {
+  return apiFetch<User>(`${BASE}/${userId}/profile-image`, { method: "DELETE" });
 }
 
 export async function deleteUser(id: string): Promise<void> {

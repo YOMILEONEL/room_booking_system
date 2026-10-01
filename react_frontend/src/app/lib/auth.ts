@@ -107,6 +107,8 @@ export const authOptions: NextAuthOptions = {
           id: String(data.id),
           email: data.email,
           displayName: data.displayName,
+          firstName: data.firstName ?? null,
+          profileImageUrl: data.profileImageUrl ?? null,
           role: data.role,
           customerType: data.customerType,
           accessToken: data.accessToken,
@@ -128,6 +130,8 @@ export const authOptions: NextAuthOptions = {
         token.role = user.role;
         token.customerType = user.customerType;
         token.displayName = user.displayName;
+        token.firstName = user.firstName;
+        token.profileImageUrl = user.profileImageUrl;
         token.userId = user.id;
         token.accessToken = user.accessToken;
         token.refreshToken = user.refreshToken;
@@ -159,6 +163,15 @@ export const authOptions: NextAuthOptions = {
         if (typeof session?.displayName === "string") {
           refreshed.displayName = session.displayName;
         }
+        // firstName/profileImageUrl: refreshAccessToken spreads the existing token, so both
+        // survive the refresh (the refresh endpoint doesn't return them). Explicit null is a
+        // valid value ("remove the picture"), hence !== undefined instead of a typeof check.
+        if (session?.firstName !== undefined) {
+          refreshed.firstName = session.firstName;
+        }
+        if (session?.profileImageUrl !== undefined) {
+          refreshed.profileImageUrl = session.profileImageUrl;
+        }
         return refreshed;
       }
 
@@ -187,6 +200,8 @@ export const authOptions: NextAuthOptions = {
         session.user.role = token.role;
         session.user.customerType = token.customerType;
         session.user.displayName = token.displayName;
+        session.user.firstName = token.firstName;
+        session.user.profileImageUrl = token.profileImageUrl;
         session.user.id = token.userId;
       }
       session.accessToken = token.accessToken;
