@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./bookingssystem/mvnw:*)",
+      "Bash(npm --prefix:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)"
+    ],
+    "deny": [
+      "Bash(git push:*)",
+      "Bash(git commit:*)",
+      "Bash(git reset --hard:*)",
+      "Bash(kubectl:*)",
+      "Bash(vercel --prod:*)",
+      "Bash(docker compose push:*)",
+      "Read(./.env*)",
+      "Read(./**/.env*)",
+      "Read(./**/application-prod.*)"
+    ]
+  }
+}

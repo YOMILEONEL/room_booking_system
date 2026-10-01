@@ -8,15 +8,18 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import steve.bookingssystem.room.model.BookedPeriodDTO;
 import steve.bookingssystem.room.model.Room;
 import steve.bookingssystem.room.model.RoomImageDto;
 import steve.bookingssystem.room.model.RoomResponseDTO;
 import steve.bookingssystem.room.service.RoomImageService;
 import steve.bookingssystem.room.service.RoomService;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -51,11 +54,32 @@ public class RoomController {
         return roomService.findRoomById(id);
     }
 
+    @GetMapping("/{id}/booked-periods")
+    @Operation(summary = "Belegte Zeiträume eines Raums abrufen",
+            description = "Liefert nur Start- und Enddatum der Buchungen, die das Fenster [from, to] überlappen " +
+                    "(Grenzen inklusive), aufsteigend nach Startdatum. Keine personenbezogenen Daten. " +
+                    "Standard: from = heute, to = heute + 90 Tage (unabhängig voneinander). Maximale Spanne 366 Tage.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Belegte Zeiträume geliefert (ggf. leer)"),
+            @ApiResponse(responseCode = "400", description = "to liegt vor from, Spanne über 366 Tage oder ungültiges Datum"),
+            @ApiResponse(responseCode = "401", description = "Nicht eingeloggt"),
+            @ApiResponse(responseCode = "404", description = "Raum nicht gefunden (oder deaktiviert und kein Admin)")
+    })
+    public List<BookedPeriodDTO> getBookedPeriods(
+            @Parameter(description = "ID des Raums") @PathVariable UUID id,
+            @Parameter(description = "Fensterbeginn (YYYY-MM-DD), Standard heute")
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @Parameter(description = "Fensterende (YYYY-MM-DD), Standard heute + 90 Tage")
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        return roomService.getBookedPeriods(id, from, to);
+    }
+
     @PostMapping("/save")
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Neuen Raum anlegen (nur Admin)")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Raum angelegt"),
+            @ApiResponse(responseCode = "401", description = "Nicht eingeloggt oder Token ungültig"),
             @ApiResponse(responseCode = "403", description = "Kein Admin-Konto")
     })
     public Room saveRoom(@Valid @RequestBody Room room) {
@@ -66,6 +90,7 @@ public class RoomController {
     @Operation(summary = "Raum bearbeiten (nur Admin)")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Raum aktualisiert"),
+            @ApiResponse(responseCode = "401", description = "Nicht eingeloggt oder Token ungültig"),
             @ApiResponse(responseCode = "403", description = "Kein Admin-Konto"),
             @ApiResponse(responseCode = "404", description = "Raum nicht gefunden")
     })
@@ -77,6 +102,7 @@ public class RoomController {
     @Operation(summary = "Raum aktivieren (nur Admin)", description = "Macht einen zuvor deaktivierten Raum wieder für Kunden sichtbar.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Raum aktiviert"),
+            @ApiResponse(responseCode = "401", description = "Nicht eingeloggt oder Token ungültig"),
             @ApiResponse(responseCode = "403", description = "Kein Admin-Konto"),
             @ApiResponse(responseCode = "404", description = "Raum nicht gefunden")
     })
@@ -89,6 +115,7 @@ public class RoomController {
             description = "Soft-Delete: der Raum verschwindet für Kunden, bleibt aber für Admins sichtbar und bearbeitbar.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Raum deaktiviert"),
+            @ApiResponse(responseCode = "401", description = "Nicht eingeloggt oder Token ungültig"),
             @ApiResponse(responseCode = "403", description = "Kein Admin-Konto"),
             @ApiResponse(responseCode = "404", description = "Raum nicht gefunden")
     })
@@ -110,6 +137,7 @@ public class RoomController {
     @Operation(summary = "Foto zu einem Raum hochladen (nur Admin)", description = "Multipart-Upload, maximal 5 MB pro Datei.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Foto hochgeladen"),
+            @ApiResponse(responseCode = "401", description = "Nicht eingeloggt oder Token ungültig"),
             @ApiResponse(responseCode = "403", description = "Kein Admin-Konto"),
             @ApiResponse(responseCode = "404", description = "Raum nicht gefunden")
     })
@@ -121,6 +149,7 @@ public class RoomController {
     @Operation(summary = "Foto eines Raums löschen (nur Admin)")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Foto gelöscht"),
+            @ApiResponse(responseCode = "401", description = "Nicht eingeloggt oder Token ungültig"),
             @ApiResponse(responseCode = "403", description = "Kein Admin-Konto"),
             @ApiResponse(responseCode = "404", description = "Raum oder Foto nicht gefunden")
     })
@@ -134,6 +163,7 @@ public class RoomController {
             description = "Nimmt die gewünschte Reihenfolge als Liste von Foto-IDs entgegen; das erste Foto wird das Titelbild.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Neue Reihenfolge übernommen"),
+            @ApiResponse(responseCode = "401", description = "Nicht eingeloggt oder Token ungültig"),
             @ApiResponse(responseCode = "403", description = "Kein Admin-Konto"),
             @ApiResponse(responseCode = "404", description = "Raum nicht gefunden")
     })

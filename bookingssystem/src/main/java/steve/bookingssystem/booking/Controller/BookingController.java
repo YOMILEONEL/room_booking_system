@@ -36,6 +36,7 @@ public class BookingController {
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Buchung angelegt"),
             @ApiResponse(responseCode = "400", description = "Enddatum vor Startdatum"),
+            @ApiResponse(responseCode = "401", description = "Nicht eingeloggt oder Token ungültig"),
             @ApiResponse(responseCode = "403", description = "Admin-Konto oder fremde userId"),
             @ApiResponse(responseCode = "404", description = "Raum nicht gefunden"),
             @ApiResponse(responseCode = "409", description = "Raum in diesem Zeitraum bereits gebucht")
@@ -51,6 +52,7 @@ public class BookingController {
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Buchung angelegt"),
             @ApiResponse(responseCode = "400", description = "Enddatum vor Startdatum oder E-Mail gehört zu keinem Kunden-Konto"),
+            @ApiResponse(responseCode = "401", description = "Nicht eingeloggt oder Token ungültig"),
             @ApiResponse(responseCode = "403", description = "Kein Admin-Konto"),
             @ApiResponse(responseCode = "404", description = "Kunde oder Raum nicht gefunden"),
             @ApiResponse(responseCode = "409", description = "Raum in diesem Zeitraum bereits gebucht")
@@ -74,6 +76,7 @@ public class BookingController {
                     "heutigen Tag einschließt - gilt für Kunden und Admins gleichermaßen.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Buchung gelöscht"),
+            @ApiResponse(responseCode = "401", description = "Nicht eingeloggt oder Token ungültig"),
             @ApiResponse(responseCode = "403", description = "Fremde Buchung, kein Admin"),
             @ApiResponse(responseCode = "404", description = "Buchung nicht gefunden"),
             @ApiResponse(responseCode = "409", description = "Bezahlte oder laufende Buchung kann nicht gelöscht werden")
@@ -86,6 +89,7 @@ public class BookingController {
     @Operation(summary = "Einzelne Buchung abrufen")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Buchung geliefert"),
+            @ApiResponse(responseCode = "401", description = "Nicht eingeloggt oder Token ungültig"),
             @ApiResponse(responseCode = "403", description = "Fremde Buchung, kein Admin"),
             @ApiResponse(responseCode = "404", description = "Buchung nicht gefunden")
     })

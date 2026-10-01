@@ -17,6 +17,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import steve.bookingssystem.security.JsonAuthenticationEntryPoint;
 import steve.bookingssystem.security.JwtAuthFilter;
 import steve.bookingssystem.security.RateLimitFilter;
 import steve.bookingssystem.user.service.CustomUserDetailsService;
@@ -32,6 +33,7 @@ public class SecurityConfig {
     private final CustomUserDetailsService userDetailsService;
     private final JwtAuthFilter jwtAuthFilter;
     private final RateLimitFilter rateLimitFilter;
+    private final JsonAuthenticationEntryPoint authenticationEntryPoint;
 
     // Comma-separated list, since the frontend is deployed to different origins per environment
     // (docs/code-review.md, 2.4) - defaults to the local dev origin so nothing changes out of the box.
@@ -71,7 +73,11 @@ public class SecurityConfig {
                                 .requestMatchers("/error").permitAll()
                                 .anyRequest().authenticated()
                 )
-                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+                // Missing/invalid token -> JwtAuthFilter leaves the request unauthenticated, and
+                // without this entry point Spring answers 403. Now it is 401 with a JSON body;
+                // real permission failures (AuthorizationService) stay 403.
+                .exceptionHandling(e -> e.authenticationEntryPoint(authenticationEntryPoint))
+                .addFilterBefore(jwtAuthFilter,UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
     }

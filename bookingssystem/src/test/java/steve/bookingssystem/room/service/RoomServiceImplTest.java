@@ -8,6 +8,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import steve.bookingssystem.booking.model.Booking;
 import steve.bookingssystem.booking.repository.BookingRepository;
 import steve.bookingssystem.exception.ResourceNotFoundException;
+import steve.bookingssystem.room.model.BookedPeriodDTO;
 import steve.bookingssystem.room.model.Room;
 import steve.bookingssystem.room.model.RoomResponseDTO;
 import steve.bookingssystem.room.model.Status;
@@ -24,6 +25,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -135,5 +138,104 @@ class RoomServiceImplTest {
         Room result = roomService.updateRoom(roomId, details);
 
         assertThat(result.getRoomStatus()).isEqualTo(Status.GEBUCHT);
+    }
+
+    private Booking period(Room room, LocalDate start, LocalDate end) {
+        Booking booking = new Booking();
+        booking.setRoom(room);
+        booking.setStartTime(start);
+        booking.setEndTime(end);
+        return booking;
+    }
+
+    @Test
+    void getBookedPeriods_passesWindowToOverlapQuery_sortsAndMapsOnlyDates() {
+        UUID roomId = UUID.randomUUID();
+        Room room = room(roomId, true);
+        when(roomRepository.findById(roomId)).thenReturn(Optional.of(room));
+        LocalDate from = LocalDate.of(2026, 3, 1);
+        LocalDate to = LocalDate.of(2026, 3, 31);
+        when(bookingRepository.findOverlapping(roomId, from, to, null)).thenReturn(List.of(
+                period(room, LocalDate.of(2026, 3, 20), LocalDate.of(2026, 3, 22)),
+                period(room, LocalDate.of(2026, 2, 27), LocalDate.of(2026, 3, 1)),
+                period(room, LocalDate.of(2026, 3, 5), LocalDate.of(2026, 3, 6))));
+
+        List<BookedPeriodDTO> result = roomService.getBookedPeriods(roomId, from, to);
+
+        assertThat(result).containsExactly(
+                new BookedPeriodDTO(LocalDate.of(2026, 2, 27), LocalDate.of(2026, 3, 1)),
+                new BookedPeriodDTO(LocalDate.of(2026, 3, 5), LocalDate.of(2026, 3, 6)),
+                new BookedPeriodDTO(LocalDate.of(2026, 3, 20), LocalDate.of(2026, 3, 22)));
+    }
+
+    @Test
+    void getBookedPeriods_defaultsToTodayAndTodayPlus90() {
+        UUID roomId = UUID.randomUUID();
+        when(roomRepository.findById(roomId)).thenReturn(Optional.of(room(roomId, true)));
+        LocalDate today = LocalDate.now();
+        when(bookingRepository.findOverlapping(roomId, today, today.plusDays(90), null)).thenReturn(List.of());
+
+        assertThat(roomService.getBookedPeriods(roomId, null, null)).isEmpty();
+
+        verify(bookingRepository).findOverlapping(roomId, today, today.plusDays(90), null);
+    }
+
+    @Test
+    void getBookedPeriods_defaultsAreAppliedIndependently() {
+        UUID roomId = UUID.randomUUID();
+        when(roomRepository.findById(roomId)).thenReturn(Optional.of(room(roomId, true)));
+        LocalDate today = LocalDate.now();
+        LocalDate from = today.minusDays(10);
+        LocalDate to = today.plusDays(5);
+        when(bookingRepository.findOverlapping(roomId, from, today.plusDays(90), null)).thenReturn(List.of());
+        when(bookingRepository.findOverlapping(roomId, today, to, null)).thenReturn(List.of());
+
+        roomService.getBookedPeriods(roomId, from, null);
+        roomService.getBookedPeriods(roomId, null, to);
+
+        verify(bookingRepository).findOverlapping(roomId, from, today.plusDays(90), null);
+        verify(bookingRepository).findOverlapping(roomId, today, to, null);
+    }
+
+    @Test
+    void getBookedPeriods_rejectsToBeforeFrom() {
+        UUID roomId = UUID.randomUUID();
+        LocalDate from = LocalDate.of(2026, 3, 10);
+
+        assertThatThrownBy(() -> roomService.getBookedPeriods(roomId, from, from.minusDays(1)))
+                .isInstanceOf(IllegalArgumentException.class);
+        verify(bookingRepository, never()).findOverlapping(any(), any(), any(), any());
+    }
+
+    @Test
+    void getBookedPeriods_rejectsSpanOver366Days_butAllows366() {
+        UUID roomId = UUID.randomUUID();
+        when(roomRepository.findById(roomId)).thenReturn(Optional.of(room(roomId, true)));
+        LocalDate from = LocalDate.of(2026, 1, 1);
+        when(bookingRepository.findOverlapping(roomId, from, from.plusDays(366), null)).thenReturn(List.of());
+
+        assertThatThrownBy(() -> roomService.getBookedPeriods(roomId, from, from.plusDays(367)))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThat(roomService.getBookedPeriods(roomId, from, from.plusDays(366))).isEmpty();
+    }
+
+    @Test
+    void getBookedPeriods_unknownRoomIsNotFound() {
+        UUID roomId = UUID.randomUUID();
+        when(roomRepository.findById(roomId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> roomService.getBookedPeriods(roomId, null, null))
+                .isInstanceOf(ResourceNotFoundException.class);
+        verify(bookingRepository, never()).findOverlapping(any(), any(), any(), any());
+    }
+
+    @Test
+    void getBookedPeriods_inactiveRoomIsNotFoundForNonAdmin() {
+        UUID roomId = UUID.randomUUID();
+        when(roomRepository.findById(roomId)).thenReturn(Optional.of(room(roomId, false)));
+        when(authorizationService.isAdmin()).thenReturn(false);
+
+        assertThatThrownBy(() -> roomService.getBookedPeriods(roomId, null, null))
+                .isInstanceOf(ResourceNotFoundException.class);
     }
 }

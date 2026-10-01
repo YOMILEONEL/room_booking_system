@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { createBooking, createBookingForCustomer } from "../api/booking.api";
-import { fetchRooms, type Room } from "../api/room.api";
+import { fetchRooms, type BookedPeriod, type Room } from "../api/room.api";
 import { extractErrorMessage } from "../api/apiClient";
 import { Card, Button, TextInput, Select, Alert } from "./ui";
 
@@ -13,9 +13,10 @@ interface BookingAddProps {
   fixedRoomId?: string;
   fixedRoomName?: string;
   onBooked?: () => void;
+  bookedPeriods?: BookedPeriod[];
 }
 
-const BookingAdd: React.FC<BookingAddProps> = ({ fixedRoomId, fixedRoomName, onBooked }) => {
+const BookingAdd: React.FC<BookingAddProps> = ({ fixedRoomId, fixedRoomName, onBooked, bookedPeriods }) => {
   const { data: session } = useSession();
   const isAdmin = session?.user?.role === "ADMIN";
   const isOrganisation = session?.user?.customerType === "ORGANISATION";
@@ -38,6 +39,13 @@ const BookingAdd: React.FC<BookingAddProps> = ({ fixedRoomId, fixedRoomName, onB
       .then((data) => setRooms(data))
       .catch((err) => console.error("Fehler beim Laden der Räume:", err));
   }, [fixedRoomId]);
+
+  // ISO "YYYY-MM-DD" strings compare correctly lexicographically; bounds are inclusive.
+  const hasConflict =
+    !!fixedRoomId &&
+    !!startTime &&
+    !!endTime &&
+    (bookedPeriods ?? []).some((p) => startTime <= p.endTime && endTime >= p.startTime);
 
   const resetForm = () => {
     setRoomId(fixedRoomId ?? "");
@@ -180,10 +188,15 @@ const BookingAdd: React.FC<BookingAddProps> = ({ fixedRoomId, fixedRoomName, onB
         />
 
         <div className="sm:col-span-2 grid gap-3">
+          {hasConflict && (
+            <Alert variant="danger">
+              Der gewählte Zeitraum überschneidet sich mit einer bestehenden Buchung.
+            </Alert>
+          )}
           {error && <Alert variant="danger">{error}</Alert>}
           {success && <Alert variant="success">{success}</Alert>}
 
-          <Button type="submit" disabled={submitting} className="w-full sm:w-auto justify-self-start">
+          <Button type="submit" disabled={submitting || hasConflict}className="w-full sm:w-auto justify-self-start">
             {submitting ? "Speichert..." : "Buchung speichern"}
           </Button>
         </div>

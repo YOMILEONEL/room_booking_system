@@ -61,7 +61,7 @@ class AuthFlowIntegrationTest {
 
         // Protected endpoint rejects requests without a token.
         mockMvc.perform(get("/booking/getAll"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
 
         // Refresh yields a usable new access token.
         String refreshBody = objectMapper.writeValueAsString(Map.of("refreshToken", refreshToken));

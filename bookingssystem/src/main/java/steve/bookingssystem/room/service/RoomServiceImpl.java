@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service;
 import steve.bookingssystem.booking.model.Booking;
 import steve.bookingssystem.booking.repository.BookingRepository;
 import steve.bookingssystem.exception.ResourceNotFoundException;
+import steve.bookingssystem.room.model.BookedPeriodDTO;
 import steve.bookingssystem.room.model.Room;
 import steve.bookingssystem.room.model.RoomResponseDTO;
 import steve.bookingssystem.room.repository.RoomRepository;
@@ -13,6 +14,8 @@ import steve.bookingssystem.user.model.CustomerType;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -129,5 +132,36 @@ public class RoomServiceImpl implements RoomService {
                 .orElseThrow(() -> new ResourceNotFoundException("Room not found: " + id));
         room.setActive(false);
         return roomRepository.save(room);
+    }
+
+    private static final int DEFAULT_WINDOW_DAYS = 90;
+    private static final long MAX_WINDOW_DAYS = 366;
+
+    @Override
+    public List<BookedPeriodDTO> getBookedPeriods(UUID roomId, LocalDate from, LocalDate to) {
+        LocalDate today = LocalDate.now();
+        LocalDate windowFrom = from != null ? from : today;
+        LocalDate windowTo = to != null ? to : today.plusDays(DEFAULT_WINDOW_DAYS);
+
+        if (windowTo.isBefore(windowFrom)) {
+            throw new IllegalArgumentException("'to' darf nicht vor 'from' liegen.");
+        }
+        if (ChronoUnit.DAYS.between(windowFrom, windowTo) > MAX_WINDOW_DAYS) {
+            throw new IllegalArgumentException("Der Zeitraum darf höchstens " + MAX_WINDOW_DAYS + " Tage umfassen.");
+        }
+
+        // Same visibility rule as findRoomById: unknown, or inactive and not admin -> 404.
+        Room room = roomRepository.findById(roomId)
+                .orElseThrow(() -> new ResourceNotFoundException("Room not found: " + roomId));
+        if (!room.isActive() && !authorizationService.isAdmin()) {
+            throw new ResourceNotFoundException("Room not found: " + roomId);
+        }
+
+        return bookingRepository.findOverlapping(roomId, windowFrom, windowTo, null)
+                .stream()
+                .map(BookedPeriodDTO::from)
+                .sorted(Comparator.comparing(BookedPeriodDTO::startTime)
+                        .thenComparing(BookedPeriodDTO::endTime))
+                .toList();
     }
 }

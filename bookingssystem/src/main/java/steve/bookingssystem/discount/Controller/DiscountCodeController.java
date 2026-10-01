@@ -31,6 +31,7 @@ public class DiscountCodeController {
     @Operation(summary = "Rabattcode anlegen", description = "Prozentual oder absolut, mit Gültigkeitszeitraum.")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Rabattcode angelegt"),
+            @ApiResponse(responseCode = "401", description = "Nicht eingeloggt oder Token ungültig"),
             @ApiResponse(responseCode = "403", description = "Kein Admin-Konto")
     })
     public DiscountCodeResponseDTO create(@Valid @RequestBody DiscountCode discountCode) {
@@ -48,6 +49,7 @@ public class DiscountCodeController {
     @Operation(summary = "Rabattcode löschen")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Rabattcode gelöscht"),
+            @ApiResponse(responseCode = "401", description = "Nicht eingeloggt oder Token ungültig"),
             @ApiResponse(responseCode = "403", description = "Kein Admin-Konto"),
             @ApiResponse(responseCode = "404", description = "Rabattcode nicht gefunden")
     })
