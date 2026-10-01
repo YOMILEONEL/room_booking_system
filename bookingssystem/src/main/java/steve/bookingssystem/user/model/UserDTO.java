@@ -14,9 +14,12 @@ public class UserDTO {
     private String firstName;
     private String lastName;
     private String phoneNumber;
+    private String profileImageUrl;
 
     public UserDTO(UUID id, String email, UserRole role, CustomerType customerType,
-                   String organisationName, String firstName, String lastName, String phoneNumber) {
+                   String organisationName, String firstName, String lastName, String phoneNumber,
+                   String profileImageUrl) {
+        this.profileImageUrl = profileImageUrl;
         this.id = id;
         this.email = email;
         this.role = role;

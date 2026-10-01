@@ -1,8 +1,12 @@
 package steve.bookingssystem.user.service;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+import steve.bookingssystem.storage.StorageService;
 import steve.bookingssystem.exception.ResourceNotFoundException;
 import steve.bookingssystem.security.AuthorizationService;
 import steve.bookingssystem.user.model.UpdateUserRequest;
@@ -16,6 +20,11 @@ import java.util.stream.Collectors;
 
 @Service
 public class UserServiceImpl implements UserService {
+
+    private static final Logger log = LoggerFactory.getLogger(UserServiceImpl.class);
+
+    @Autowired
+    private StorageService storageService;
 
     @Autowired
     private UserRepository userRepository;
@@ -77,7 +86,9 @@ public class UserServiceImpl implements UserService {
     public void deleteUser(UUID id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + id));
+        String imageUrl = user.getProfileImageUrl();
         userRepository.delete(user);
+        deleteOldImageBestEffort(imageUrl);
     }
 
     @Override
@@ -89,5 +100,49 @@ public class UserServiceImpl implements UserService {
     @Override
     public List<UserDTO> getAllUsers() {
         return userRepository.findAll().stream().map(User::getUserDTO).collect(Collectors.toList());
+    }
+
+    @Override
+    public UserDTO uploadProfileImage(UUID id, MultipartFile file) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + id));
+        String oldUrl = user.getProfileImageUrl();
+        // If the upload fails the exception propagates and the record stays untouched.
+        String newUrl = storageService.uploadProfileImage(id, file);
+        user.setProfileImageUrl(newUrl);
+        // Known limitation: two parallel uploads for the same user can still orphan one
+        // object (both read the same oldUrl). Deliberately not solved with locks.
+        User saved;
+        try {
+            saved = userRepository.save(user);
+        } catch (RuntimeException e) {
+            // Record not updated: the new object would be orphaned, the old one stays valid.
+            deleteOldImageBestEffort(newUrl);
+            throw e;
+        }
+        deleteOldImageBestEffort(oldUrl);
+        return User.getUserDTO(saved);
+    }
+
+    @Override
+    public UserDTO removeProfileImage(UUID id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + id));
+        String oldUrl = user.getProfileImageUrl();
+        user.setProfileImageUrl(null);
+        User saved = userRepository.save(user);
+        deleteOldImageBestEffort(oldUrl);
+        return User.getUserDTO(saved);
+    }
+
+    private void deleteOldImageBestEffort(String oldUrl) {
+        if (oldUrl == null) {
+            return;
+        }
+        try {
+            storageService.deleteProfileImageByPublicUrl(oldUrl);
+        } catch (Exception e) {
+            log.warn("Profilbild konnte nicht gelöscht werden: {}", e.getMessage());
+        }
     }
 }

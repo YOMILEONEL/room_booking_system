@@ -13,6 +13,8 @@ declare module "next-auth" {
       id?: string;
       email?: string | null;
       displayName?: string;
+      firstName?: string | null;
+      profileImageUrl?: string | null;
       role?: string;
       customerType?: string;
     };
@@ -22,6 +24,8 @@ declare module "next-auth" {
     id: string;
     email?: string | null;
     displayName?: string;
+    firstName?: string | null;
+    profileImageUrl?: string | null;
     role?: string;
     customerType?: string;
     accessToken: string;
@@ -35,6 +39,8 @@ declare module "next-auth/jwt" {
     refreshToken?: string;
     accessTokenExpires?: number;
     displayName?: string;
+    firstName?: string | null;
+    profileImageUrl?: string | null;
     role?: string;
     customerType?: string;
     userId?: string;

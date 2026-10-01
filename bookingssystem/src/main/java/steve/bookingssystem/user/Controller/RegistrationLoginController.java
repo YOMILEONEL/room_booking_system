@@ -99,7 +99,7 @@ public class RegistrationLoginController {
 
         String accessToken = jwtService.generateAccessToken(userDetailsService.loadUserByUsername(savedUser.getEmail()));
         RefreshToken refreshToken = refreshTokenService.create(savedUser);
-        AuthResponse response = new AuthResponse(savedUser.getId(), savedUser.getEmail(), savedUser.getDisplayName(), savedUser.getRole(), savedUser.getCustomerType(), accessToken, refreshToken.getToken());
+        AuthResponse response = new AuthResponse(savedUser.getId(), savedUser.getEmail(), savedUser.getDisplayName(), savedUser.getFirstName(), savedUser.getProfileImageUrl(), savedUser.getRole(), savedUser.getCustomerType(), accessToken, refreshToken.getToken());
         return ResponseEntity.ok(response);
     }
 
@@ -120,7 +120,7 @@ public class RegistrationLoginController {
         User user = userRepository.findByEmail(request.email());
         String accessToken = jwtService.generateAccessToken(userDetailsService.loadUserByUsername(user.getEmail()));
         RefreshToken refreshToken = refreshTokenService.create(user);
-        AuthResponse response = new AuthResponse(user.getId(), user.getEmail(), user.getDisplayName(), user.getRole(), user.getCustomerType(), accessToken, refreshToken.getToken());
+        AuthResponse response = new AuthResponse(user.getId(), user.getEmail(), user.getDisplayName(), user.getFirstName(), user.getProfileImageUrl(), user.getRole(), user.getCustomerType(), accessToken, refreshToken.getToken());
         return ResponseEntity.ok(response);
     }
 

@@ -1,5 +1,7 @@
 package steve.bookingssystem.storage;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -9,6 +11,7 @@ import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3Configuration;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import java.io.IOException;
@@ -18,6 +21,9 @@ import java.util.UUID;
 
 @Service
 public class StorageServiceImpl implements StorageService {
+
+    private static final Logger log = LoggerFactory.getLogger(StorageServiceImpl.class);
+    private static final String AVATAR_PREFIX = "avatars/";
 
     @Value("${supabase.storage.endpoint:}")
     private String endpoint;
@@ -38,6 +44,38 @@ public class StorageServiceImpl implements StorageService {
 
     @Override
     public synchronized String uploadRoomImage(UUID roomId, MultipartFile file) {
+        return validateAndUpload("rooms/" + roomId + "-", file);
+    }
+
+    @Override
+    public synchronized String uploadProfileImage(UUID userId, MultipartFile file) {
+        return validateAndUpload(AVATAR_PREFIX + userId + "-", file);
+    }
+
+    @Override
+    public synchronized void deleteProfileImageByPublicUrl(String publicUrl) {
+        if (publicUrl == null || publicUrl.isBlank() || bucket.isBlank() || supabaseUrl.isBlank()
+                || endpoint.isBlank() || accessKey.isBlank() || secretKey.isBlank()) {
+            return;
+        }
+        // Only ever delete avatars of our own bucket - never act on arbitrary URLs or other
+        // object kinds (e.g. room photos).
+        String bucketPrefix = supabaseUrl + "/storage/v1/object/public/" + bucket + "/";
+        String avatarPrefix = bucketPrefix + AVATAR_PREFIX;
+        if (!publicUrl.startsWith(avatarPrefix) || publicUrl.length() == avatarPrefix.length()) {
+            log.warn("Löschen abgelehnt: URL liegt nicht unter {}", AVATAR_PREFIX);
+            return;
+        }
+        String key = publicUrl.substring(bucketPrefix.length());
+        if (key.contains("..") || key.contains("\\")) {
+            log.warn("Löschen abgelehnt: ungültiger Objektschlüssel");
+            return;
+        }
+        client().deleteObject(DeleteObjectRequest.builder().bucket(bucket).key(key).build());
+    }
+
+    // Shared validation + upload for all image kinds. keyPrefix is e.g. "rooms/<id>-".
+    private String validateAndUpload(String keyPrefix, MultipartFile file) {
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException("Keine Datei hochgeladen");
         }
@@ -66,7 +104,7 @@ public class StorageServiceImpl implements StorageService {
         // The extension comes only from the (now content-verified) contentType, never from the
         // client-supplied filename - that filename was previously spliced straight into the S3
         // key (e.g. "photo.png/../../evil" would have contributed ".png/../../evil").
-        String key = "rooms/" + roomId + "-" + UUID.randomUUID() + extensionFor(contentType);
+        String key = keyPrefix + UUID.randomUUID() + extensionFor(contentType);
 
         client().putObject(
                 PutObjectRequest.builder().bucket(bucket).key(key).contentType(contentType).build(),

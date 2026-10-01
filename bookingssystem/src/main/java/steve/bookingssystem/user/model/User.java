@@ -41,8 +41,11 @@ public class User {
     private String lastName;
     private String phoneNumber;
 
+    @Column(columnDefinition = "TEXT")
+    private String profileImageUrl;
+
     public static UserDTO getUserDTO(User u){
-        return new UserDTO(u.id, u.email, u.role, u.customerType, u.organisationName, u.firstName, u.lastName, u.phoneNumber);
+        return new UserDTO(u.id, u.email, u.role, u.customerType, u.organisationName, u.firstName, u.lastName, u.phoneNumber, u.profileImageUrl);
     }
 
     // Friendly name for the UI - "Vorname Nachname", organisation name, or the email as a last
