@@ -1,5 +1,6 @@
 package steve.bookingssystem.room.service;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -16,7 +17,10 @@ import steve.bookingssystem.room.repository.RoomRepository;
 import steve.bookingssystem.security.AuthorizationService;
 
 import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -41,6 +45,13 @@ class RoomServiceImplTest {
 
     @InjectMocks
     private RoomServiceImpl roomService;
+
+    private static final LocalDate FIXED_TODAY = LocalDate.of(2026, 6, 15);
+
+    @BeforeEach
+    void setUpClock() {
+        roomService.clock = Clock.fixed(Instant.parse("2026-06-15T10:00:00Z"), ZoneOffset.UTC);
+    }
 
     private Room room(UUID id, boolean active) {
         Room room = new Room();
@@ -172,7 +183,7 @@ class RoomServiceImplTest {
     void getBookedPeriods_defaultsToTodayAndTodayPlus90() {
         UUID roomId = UUID.randomUUID();
         when(roomRepository.findById(roomId)).thenReturn(Optional.of(room(roomId, true)));
-        LocalDate today = LocalDate.now();
+        LocalDate today = FIXED_TODAY;
         when(bookingRepository.findOverlapping(roomId, today, today.plusDays(90), null)).thenReturn(List.of());
 
         assertThat(roomService.getBookedPeriods(roomId, null, null)).isEmpty();
@@ -184,7 +195,7 @@ class RoomServiceImplTest {
     void getBookedPeriods_defaultsAreAppliedIndependently() {
         UUID roomId = UUID.randomUUID();
         when(roomRepository.findById(roomId)).thenReturn(Optional.of(room(roomId, true)));
-        LocalDate today = LocalDate.now();
+        LocalDate today = FIXED_TODAY;
         LocalDate from = today.minusDays(10);
         LocalDate to = today.plusDays(5);
         when(bookingRepository.findOverlapping(roomId, from, today.plusDays(90), null)).thenReturn(List.of());

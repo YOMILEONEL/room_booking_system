@@ -196,7 +196,7 @@ const BookingAdd: React.FC<BookingAddProps> = ({ fixedRoomId, fixedRoomName, onB
           {error && <Alert variant="danger">{error}</Alert>}
           {success && <Alert variant="success">{success}</Alert>}
 
-          <Button type="submit" disabled={submitting || hasConflict}className="w-full sm:w-auto justify-self-start">
+          <Button type="submit" disabled={submitting || hasConflict} className="w-full sm:w-auto justify-self-start">
             {submitting ? "Speichert..." : "Buchung speichern"}
           </Button>
         </div>

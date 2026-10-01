@@ -13,6 +13,7 @@ import steve.bookingssystem.security.AuthorizationService;
 import steve.bookingssystem.user.model.CustomerType;
 
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.Comparator;
@@ -24,12 +25,17 @@ import java.util.stream.Collectors;
 @Service
 public class RoomServiceImpl implements RoomService {
 
+    private static final int DEFAULT_WINDOW_DAYS = 90;
+    private static final long MAX_WINDOW_DAYS = 366;
+
     @Autowired
     public RoomRepository roomRepository;
     @Autowired
     public AuthorizationService authorizationService;
     @Autowired
     public BookingRepository bookingRepository;
+    @Autowired
+    public Clock clock;
 
     @Override
     public Room saveRoom(Room room) {
@@ -134,12 +140,9 @@ public class RoomServiceImpl implements RoomService {
         return roomRepository.save(room);
     }
 
-    private static final int DEFAULT_WINDOW_DAYS = 90;
-    private static final long MAX_WINDOW_DAYS = 366;
-
     @Override
     public List<BookedPeriodDTO> getBookedPeriods(UUID roomId, LocalDate from, LocalDate to) {
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(clock);
         LocalDate windowFrom = from != null ? from : today;
         LocalDate windowTo = to != null ? to : today.plusDays(DEFAULT_WINDOW_DAYS);
 

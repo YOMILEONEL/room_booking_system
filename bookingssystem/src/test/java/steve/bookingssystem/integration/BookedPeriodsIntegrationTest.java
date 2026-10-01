@@ -18,6 +18,7 @@ import java.util.UUID;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -130,5 +131,79 @@ class BookedPeriodsIntegrationTest {
         // 404: unknown room
         mockMvc.perform(get("/room/" + UUID.randomUUID() + "/booked-periods").header("Authorization", memberAuth))
                 .andExpect(status().isNotFound());
+    }
+
+    private String registerAdminAuth(String suffix) throws Exception {
+        JsonNode admin = register("admin-" + suffix + "@test.example");
+        User adminUser = userRepository.findById(UUID.fromString(admin.get("id").asText())).orElseThrow();
+        adminUser.setRole(UserRole.ADMIN);
+        userRepository.save(adminUser);
+        return "Bearer " + admin.get("accessToken").asText();
+    }
+
+    private void book(String auth, JsonNode user, String roomId, String start, String end) throws Exception {
+        mockMvc.perform(post("/booking/add")
+                        .header("Authorization", auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "roomId", roomId,
+                                "userId", user.get("id").asText(),
+                                "startTime", start,
+                                "endTime", end))))
+                .andExpect(status().isCreated());
+    }
+
+    @Test
+    void bookedPeriods_inactiveRoom_notFoundForCustomer_okForAdmin() throws Exception {
+        String suffix = UUID.randomUUID().toString();
+        String adminAuth = registerAdminAuth(suffix);
+        JsonNode member = register("member-" + suffix + "@test.example");
+        String memberAuth = "Bearer " + member.get("accessToken").asText();
+        String roomId = createRoom(adminAuth, suffix);
+
+        mockMvc.perform(put("/room/" + roomId + "/deactivate").header("Authorization", adminAuth))
+                .andExpect(status().isOk());
+
+        String url = "/room/" + roomId + "/booked-periods";
+        mockMvc.perform(get(url).header("Authorization", memberAuth)
+                        .param("from", "2030-03-01").param("to", "2030-03-31"))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(get(url).header("Authorization", adminAuth)
+                        .param("from", "2030-03-01").param("to", "2030-03-31"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void bookedPeriods_includesBookingStartingOnTo() throws Exception {
+        String suffix = UUID.randomUUID().toString();
+        String adminAuth = registerAdminAuth(suffix);
+        JsonNode member = register("member-" + suffix + "@test.example");
+        String memberAuth = "Bearer " + member.get("accessToken").asText();
+        String roomId = createRoom(adminAuth, suffix);
+        book(memberAuth, member, roomId, "2030-06-10", "2030-06-12");
+
+        mockMvc.perform(get("/room/" + roomId + "/booked-periods").header("Authorization", memberAuth)
+                        .param("from", "2030-06-01").param("to", "2030-06-10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].startTime").value("2030-06-10"))
+                .andExpect(jsonPath("$[0].endTime").value("2030-06-12"));
+    }
+
+    @Test
+    void bookedPeriods_includesBookingEndingOnFrom() throws Exception {
+        String suffix = UUID.randomUUID().toString();
+        String adminAuth = registerAdminAuth(suffix);
+        JsonNode member = register("member-" + suffix + "@test.example");
+        String memberAuth = "Bearer " + member.get("accessToken").asText();
+        String roomId = createRoom(adminAuth, suffix);
+        book(memberAuth, member, roomId, "2030-05-28", "2030-06-01");
+
+        mockMvc.perform(get("/room/" + roomId + "/booked-periods").header("Authorization", memberAuth)
+                        .param("from", "2030-06-01").param("to", "2030-06-10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].startTime").value("2030-05-28"))
+                .andExpect(jsonPath("$[0].endTime").value("2030-06-01"));
     }
 }

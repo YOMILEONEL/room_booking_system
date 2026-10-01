@@ -62,7 +62,7 @@ public class RoomController {
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Belegte Zeiträume geliefert (ggf. leer)"),
             @ApiResponse(responseCode = "400", description = "to liegt vor from, Spanne über 366 Tage oder ungültiges Datum"),
-            @ApiResponse(responseCode = "401", description = "Nicht eingeloggt"),
+            @ApiResponse(responseCode = "401", description = "Nicht eingeloggt oder Token ungültig"),
             @ApiResponse(responseCode = "404", description = "Raum nicht gefunden (oder deaktiviert und kein Admin)")
     })
     public List<BookedPeriodDTO> getBookedPeriods(

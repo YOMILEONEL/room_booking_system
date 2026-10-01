@@ -77,7 +77,7 @@ public class SecurityConfig {
                 // without this entry point Spring answers 403. Now it is 401 with a JSON body;
                 // real permission failures (AuthorizationService) stay 403.
                 .exceptionHandling(e -> e.authenticationEntryPoint(authenticationEntryPoint))
-                .addFilterBefore(jwtAuthFilter,UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
     }
